@@ -1,5 +1,6 @@
 from websocket import create_connection
 import time
+import csv
 
 # Replace with your ESP32's IP and port
 esp32_ip = "192.168.43.184:81"
@@ -8,6 +9,9 @@ esp32_ip = "192.168.43.184:81"
 timeout_duration = 15
 
 ws = None  # Initialize WebSocket variable
+
+with open('speedmap_data.csv', mode='a', newline='') as file:
+    writer = csv.writer(file)
 
 while True:
     try:
@@ -26,6 +30,10 @@ while True:
                 message = ws.recv()  # Receive data from ESP32
                 print("Message from ESP32:", message)
                 
+                tokens = message.split(";")
+                writer.writerow(tokens)
+                print(f"Data written to CSV: {tokens}")
+
                 # Update the last received time
                 last_received_time = time.time()
             except Exception as e:

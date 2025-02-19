@@ -104,6 +104,99 @@ void ps4_setup() {
     // }
 }
 
+// void setup(){
+//     Serial.begin(115200);
+//     Serial.printf("Initializing...\n");
+//     // Encoder setup
+// 	ESP32Encoder::useInternalWeakPullResistors = puType::up;    // Enable the weak pull up resistors
+
+//     // Setup
+//     websocket_setup();  // WebSocket Server Setup
+//     ps4_setup();        // PS4 Controller Setup
+//     Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);  // Initialize I2C
+    
+//     // Task creation result variables
+//     BaseType_t taskCreation_ps4Sampling;
+//     BaseType_t taskCreation_UpdateEncoders;
+//     BaseType_t taskCreation_ActuateMotors;
+//     BaseType_t taskCreation_WebsocketHandler;
+//     BaseType_t taskCreation_SendToWiFi;
+//     BaseType_t taskCreation_SendToI2C;
+
+//     bool creationStatus = 1; // Creation status flag for all FreeRTOS kernel objects
+//     // Create Mutex (Mutual Exclusion Semaphore) for global variables
+//     // Note: These semaphores are declared in Globals.h so that they can be accessed in any file.
+//     xMutex_wheelMotorPs4Inputs = xSemaphoreCreateMutex();        // Mutex for global var ps4StickOutputs
+//     bsem_ = xSemaphoreCreateBinary(); // Binary semaphore to indicate that new data is acquired in 
+//     // Check creation status for each semaphore/mutex
+//     check_sem_creation(creationStatus, xMutex_wheelMotorPs4Inputs, "Mutex - PS4 Stick Outputs");
+//     check_sem_creation(creationStatus, bsem_, "Binary Semaphore - Placeholder");
+
+//     // Create queues
+//     // Note: These queues are declared in Globals.h so that they can be accessed in any file.
+//     xQueue_wifi = xQueueCreate(10, BUFFER_SIZE);  // Create a queue for WiFi messages to be sent
+//     xQueue_i2c = xQueueCreate(10, sizeof(uint8_t));  // Create a queue for I2C messages to be sent
+//     // Check creation status for each queue
+//     check_queue_creation(creationStatus, xQueue_wifi, "Queue - Send to WiFi");
+//     check_queue_creation(creationStatus, xQueue_i2c, "Queue - Send to I2C");
+
+//     // Create tasks
+//     // Arguments: Task function, Task name, Stack size (bytes), Parameters, Priority (higher numerical value means a more critical priority), Task handle
+//     taskCreation_ps4Sampling        = xTaskCreate(task_ps4_sampling,        "Task - PS4 Sampling",      4096, NULL, 4, &xTask_Ps4Sampling);
+//     taskCreation_UpdateEncoders     = xTaskCreate(task_update_encoders,     "Task - Update Encoders",   2048, NULL, 5, &xTask_UpdateEncoders);
+//     taskCreation_ActuateMotors      = xTaskCreate(task_actuate_motors,      "Task - Actuate Motors",    4096, NULL, 6, &xTask_ActuateMotors);
+//     taskCreation_WebsocketHandler   = xTaskCreate(task_websocket_handler,   "Task - WebSocket Handler", 3072, NULL, 2, &xTask_WebsocketHandler);
+//     taskCreation_SendToWiFi         = xTaskCreate(task_send_to_wifi,        "Task - Send Data",         2048, NULL, 3, &xTask_SendToWiFi);
+//     taskCreation_SendToI2C          = xTaskCreate(task_send_to_i2c,         "Task - Send I2C Data",     2048, NULL, 2, &xTask_SendToI2C);
+//     // Check creation status for each task
+//     check_task_creation(creationStatus, taskCreation_ps4Sampling,       task1Name);
+//     check_task_creation(creationStatus, taskCreation_UpdateEncoders,    task2Name);
+//     check_task_creation(creationStatus, taskCreation_ActuateMotors,     task3Name);
+//     check_task_creation(creationStatus, taskCreation_WebsocketHandler,  task4Name);
+//     check_task_creation(creationStatus, taskCreation_SendToWiFi,        task5Name);
+//     check_task_creation(creationStatus, taskCreation_SendToI2C,         task6Name);
+
+//     // If any of the semaphore/mutex and queue has failed to create, exit
+//     if (creationStatus == 0) {
+//         Serial.printf("Exiting program.\n");
+//         stop_program();
+//     }
+
+//     // Display blinking LED to indicate start of program.
+//     pinMode(LED_PIN, OUTPUT);
+//     digitalWrite(LED_PIN, HIGH);
+//     Serial.println("Starting program.");
+//     vTaskDelay(pdMS_TO_TICKS(500));
+//     digitalWrite(LED_PIN, LOW);
+
+//     // Check free stack of each tasks
+//     #if PRINT_FREE_STACK_ON_EACH_TASKS
+//     vTaskDelay(pdMS_TO_TICKS(4000)); // delay to let tasks run before printing free stack on each tasks
+//     print_free_stack(xTask_Ps4Sampling, task1Name);
+//     print_free_stack(xTask_UpdateEncoders, task2Name);
+//     print_free_stack(xTask_ActuateMotors, task3Name);
+//     print_free_stack(xTask_WebsocketHandler, task4Name);
+//     print_free_stack(xTask_SendToWiFi, task5Name);
+//     print_free_stack(xTask_SendToI2C, task6Name);
+//     Serial.printf("Free heap size: %d bytes\n", esp_get_free_heap_size());  
+//     Serial.printf("Minimum free heap ever: %d bytes\n", esp_get_minimum_free_heap_size()); 
+//     #endif
+// }
+
+// // Loop is also treated as a task. Use it to get CPU utilization.
+// void loop() {
+//     #if PRINT_CPU_UTILIZATION
+//     UtilPs4Sampling.send_util_to_wifi();
+//     UtilUpdateEncoders.send_util_to_wifi();
+//     UtilActuateMotors.send_util_to_wifi();
+//     UtilWebSocketHandler.send_util_to_wifi();
+//     UtilSendToWifi.send_util_to_wifi();
+//     UtilSendToI2c.send_util_to_wifi();
+//     #endif
+//     vTaskDelay(pdMS_TO_TICKS(CPU_UTIL_CALCULATION_PERIOD));
+// }
+
+//this is for software compensation data collection purposes
 void setup(){
     Serial.begin(115200);
     Serial.printf("Initializing...\n");
@@ -112,88 +205,18 @@ void setup(){
 
     // Setup
     websocket_setup();  // WebSocket Server Setup
-    ps4_setup();        // PS4 Controller Setup
-    Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);  // Initialize I2C
-    
-    // Task creation result variables
-    BaseType_t taskCreation_ps4Sampling;
-    BaseType_t taskCreation_UpdateEncoders;
-    BaseType_t taskCreation_ActuateMotors;
-    BaseType_t taskCreation_WebsocketHandler;
-    BaseType_t taskCreation_SendToWiFi;
-    BaseType_t taskCreation_SendToI2C;
-
-    bool creationStatus = 1; // Creation status flag for all FreeRTOS kernel objects
-    // Create Mutex (Mutual Exclusion Semaphore) for global variables
-    // Note: These semaphores are declared in Globals.h so that they can be accessed in any file.
-    xMutex_wheelMotorPs4Inputs = xSemaphoreCreateMutex();        // Mutex for global var ps4StickOutputs
-    bsem_ = xSemaphoreCreateBinary(); // Binary semaphore to indicate that new data is acquired in 
-    // Check creation status for each semaphore/mutex
-    check_sem_creation(creationStatus, xMutex_wheelMotorPs4Inputs, "Mutex - PS4 Stick Outputs");
-    check_sem_creation(creationStatus, bsem_, "Binary Semaphore - Placeholder");
-
-    // Create queues
-    // Note: These queues are declared in Globals.h so that they can be accessed in any file.
-    xQueue_wifi = xQueueCreate(10, BUFFER_SIZE);  // Create a queue for WiFi messages to be sent
-    xQueue_i2c = xQueueCreate(10, sizeof(uint8_t));  // Create a queue for I2C messages to be sent
-    // Check creation status for each queue
-    check_queue_creation(creationStatus, xQueue_wifi, "Queue - Send to WiFi");
-    check_queue_creation(creationStatus, xQueue_i2c, "Queue - Send to I2C");
-
-    // Create tasks
-    // Arguments: Task function, Task name, Stack size (bytes), Parameters, Priority (higher numerical value means a more critical priority), Task handle
-    taskCreation_ps4Sampling        = xTaskCreate(task_ps4_sampling,        "Task - PS4 Sampling",      4096, NULL, 4, &xTask_Ps4Sampling);
-    taskCreation_UpdateEncoders     = xTaskCreate(task_update_encoders,     "Task - Update Encoders",   2048, NULL, 5, &xTask_UpdateEncoders);
-    taskCreation_ActuateMotors      = xTaskCreate(task_actuate_motors,      "Task - Actuate Motors",    4096, NULL, 6, &xTask_ActuateMotors);
-    taskCreation_WebsocketHandler   = xTaskCreate(task_websocket_handler,   "Task - WebSocket Handler", 3072, NULL, 2, &xTask_WebsocketHandler);
-    taskCreation_SendToWiFi         = xTaskCreate(task_send_to_wifi,        "Task - Send Data",         2048, NULL, 3, &xTask_SendToWiFi);
-    taskCreation_SendToI2C          = xTaskCreate(task_send_to_i2c,         "Task - Send I2C Data",     2048, NULL, 2, &xTask_SendToI2C);
-    // Check creation status for each task
-    check_task_creation(creationStatus, taskCreation_ps4Sampling,       task1Name);
-    check_task_creation(creationStatus, taskCreation_UpdateEncoders,    task2Name);
-    check_task_creation(creationStatus, taskCreation_ActuateMotors,     task3Name);
-    check_task_creation(creationStatus, taskCreation_WebsocketHandler,  task4Name);
-    check_task_creation(creationStatus, taskCreation_SendToWiFi,        task5Name);
-    check_task_creation(creationStatus, taskCreation_SendToI2C,         task6Name);
-
-    // If any of the semaphore/mutex and queue has failed to create, exit
-    if (creationStatus == 0) {
-        Serial.printf("Exiting program.\n");
-        stop_program();
-    }
-
     // Display blinking LED to indicate start of program.
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
     Serial.println("Starting program.");
-    vTaskDelay(pdMS_TO_TICKS(500));
     digitalWrite(LED_PIN, LOW);
 
-    // Check free stack of each tasks
-    #if PRINT_FREE_STACK_ON_EACH_TASKS
-    vTaskDelay(pdMS_TO_TICKS(4000)); // delay to let tasks run before printing free stack on each tasks
-    print_free_stack(xTask_Ps4Sampling, task1Name);
-    print_free_stack(xTask_UpdateEncoders, task2Name);
-    print_free_stack(xTask_ActuateMotors, task3Name);
-    print_free_stack(xTask_WebsocketHandler, task4Name);
-    print_free_stack(xTask_SendToWiFi, task5Name);
-    print_free_stack(xTask_SendToI2C, task6Name);
-    Serial.printf("Free heap size: %d bytes\n", esp_get_free_heap_size());  
-    Serial.printf("Minimum free heap ever: %d bytes\n", esp_get_minimum_free_heap_size()); 
-    #endif
+    // run forward_hard_coded_with_encoder once to collect data
+    forward_hard_coded_with_encoder(0, PWM_MAX_BIT, 15000, 5000, 15000 wheelMotors);
 }
 
-// Loop is also treated as a task. Use it to get CPU utilization.
 void loop() {
-    #if PRINT_CPU_UTILIZATION
-    UtilPs4Sampling.send_util_to_wifi();
-    UtilUpdateEncoders.send_util_to_wifi();
-    UtilActuateMotors.send_util_to_wifi();
-    UtilWebSocketHandler.send_util_to_wifi();
-    UtilSendToWifi.send_util_to_wifi();
-    UtilSendToI2c.send_util_to_wifi();
-    #endif
-    vTaskDelay(pdMS_TO_TICKS(CPU_UTIL_CALCULATION_PERIOD));
+    //do nothing
 }
 
 // Task - Get input from PS4

@@ -149,15 +149,41 @@ void forward_hard_coded_with_encoder(double initialPWM, double maxPWM, double ra
     int rampUpMaxIter = (int) (rampUpTimeMs/MOTOR_WHEEL_ACTUATION_PERIOD);
     double upPwmIncrement = (maxPWM-initialPWM) / rampUpMaxIter;
     double currentPWM = initialPWM;
+
+    //write formatted message to print the headers for the csv file
+    char formattedMessage[BUFFER_SIZE];
+    snprintf(
+            formattedMessage, 
+            sizeof(formattedMessage), 
+            "PWM;UL(ticks/sample);UR(ticks/sample);BL(ticks/sample);BR(ticks/sample)\n"
+        );
+        xQueueSend(xQueue_wifi, &formattedMessage, 0);
+
+    int32_t a, b, c, d;
     // Increasing Velocity
     for (int i = 0; i < rampUpMaxIter; i++) {
         currentPWM += upPwmIncrement;
+
+        //when testing, just uncomment whichever motor you want to test
         UL_Motor.set_motor_PWM(currentPWM);
-        UR_Motor.set_motor_PWM(currentPWM);
-        BL_Motor.set_motor_PWM(currentPWM);
+        // UR_Motor.set_motor_PWM(currentPWM);
+        // BL_Motor.set_motor_PWM(currentPWM);
         BR_Motor.set_motor_PWM(currentPWM);
         
         delay_with_encoder(MOTOR_WHEEL_ACTUATION_PERIOD, wheelMotors);
+
+        a = UL_Motor.update_tick_velocity();
+        b = UR_Motor.update_tick_velocity();
+        c = BL_Motor.update_tick_velocity();
+        d = BR_Motor.update_tick_velocity();
+        
+        //printing currentPWM, and the ticksPerSample of the motors
+        snprintf(
+            formattedMessage, 
+            sizeof(formattedMessage), 
+            "%.2f;%d;%d;%d;%d", currentPWM, a, b, c, d
+        );
+        xQueueSend(xQueue_wifi, &formattedMessage, 0);
     }
 
     // Serial.printf("Max speed reached.\n");
