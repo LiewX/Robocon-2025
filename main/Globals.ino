@@ -3,7 +3,9 @@
 #include "PinAssignment.h"
 #include "Motor.h"
 #include <Bluepad32.h>
-#include <ArduinoWebsockets.h>
+//#include <ArduinoWebsockets.h>
+//#include <WiFi.h>
+#include <WebSocketsClient.h>
 
 /*========================================================================================
 =                            WHEEL MOTOR GLOBAL VARIABLES                                =
@@ -80,11 +82,19 @@ ControllerPtr myControllers[BP32_MAX_GAMEPADS];
 /*========================================================================================
 =                      WiFi DATA TRANSMISSION GLOBAL VARIABLES                           =
 ========================================================================================*/
-using namespace websockets;
+//using namespace websockets;
 
-const char* ssid = "POCOPHONE F1";          // Replace with your Wi-Fi SSID
-const char* password = "verynicepassword";  // Replace with your Wi-Fi password
+const char* ssid = "Ram";          // Replace with your Wi-Fi SSID
+const char* password = "roey4363";  // Replace with your Wi-Fi password
 
-WebsocketsServer server; // Create a WebSocket server
-WebsocketsClient client; // Store the connected client
-bool clientConnected = false;        // Track client connection status
+// Define the WebSocket client
+WebSocketsClient webSocket;
+
+// const char* serverAddress = "192.168.231.75"; // Replace with your server's IP
+// const uint16_t serverPort = 81; // Ensure this matches your server's port
+
+//WebSocketsClient webSocket;
+
+// WebsocketsServer server; // Create a WebSocket server
+// WebsocketsClient client; // Store the connected client
+// bool clientConnected = false;        // Track client connection status

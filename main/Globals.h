@@ -3,8 +3,15 @@
 #include "PinAssignment.h"
 #include "Motor.h"
 #include <Bluepad32.h>
-#include <ArduinoWebsockets.h>
+//#include <ArduinoWebsockets.h>
 #include "RuntimePrints.h"
+#include <WebSocketsClient.h>
+// #include <freertos/FreeRTOS.h>
+// #include <freertos/queue.h>
+
+// // Queue Handles
+// extern QueueHandle_t xQueue_wifi;
+// extern QueueHandle_t xQueue_i2c;
 
 #define SLAVE_ADDR_ESP1 0x10
 #define SLAVE_ADDR_ESP2 0x20
@@ -22,6 +29,8 @@ extern MotorWithEncoder BR_Motor; // Bottom Right Wheel Motor
 extern MotorWithEncoder wheelMotors [4];
 extern double wheelMotorPs4Inputs [4];          // Raw velocity calculated from PS4 analog stick
 
+
+
 /*========================================================================================
 =                                PS4 GLOBAL VARIABLES                                    =
 ========================================================================================*/
@@ -31,14 +40,16 @@ extern ControllerPtr myControllers[BP32_MAX_GAMEPADS];
 /*========================================================================================
 =                      WiFi DATA TRANSMISSION GLOBAL VARIABLES                           =
 ========================================================================================*/
-using namespace websockets;
+// using namespace websockets;
 
 extern const char* ssid;        // Replace with your Wi-Fi SSID
 extern const char* password;    // Replace with your Wi-Fi password
 
-extern WebsocketsServer server; // Create a WebSocket server
-extern WebsocketsClient client; // Store the connected client
-extern bool clientConnected;    // Track client connection status
+extern WebSocketsClient webSocket;  // Declare it as an external variable
+
+// extern WebsocketsServer server; // Create a WebSocket server
+// extern WebsocketsClient client; // Store the connected client
+// extern bool clientConnected;    // Track client connection status
 
 /*========================================================================================
 =                       I2C DATA TRANSMISSION GLOBAL VARIABLES                           =

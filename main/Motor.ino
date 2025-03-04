@@ -29,6 +29,7 @@ Motor::Motor(uint8_t pin1, uint8_t pwmPin, double maxPwmIncrement)
 // Method to set motor speed and direction
 void Motor::set_motor_PWM(double dutyCycle) {
     int pwmValue = (int) ((dutyCycle * PWM_MAX_BIT + 0.5) / 100);   // converts duty cycle to units of bits while rounds to closest integer
+    //Serial.printf("%d, %d, %d",-PWM_MAX_BIT,PWM_MAX_BIT,pwmValue);
     pwmValue = constrain(pwmValue, -PWM_MAX_BIT, PWM_MAX_BIT);      // limits value between maximum and minimum
        
     if (pwmValue >= 0) {            // CW
@@ -140,52 +141,238 @@ void actuate_motor_wheels() {
 }
 
 // This is a blocking function and is used for testing and data collection purposes only. Do not use in actual code
+// void forward_hard_coded_with_encoder(double initialPWM, double maxPWM, double rampUpTimeMs, double maxSpeedTime, double rampDownTimeMs, MotorWithEncoder (&wheelMotors)[4]) {
+
+
+
+  
+
+//     // Setting up references
+//     MotorWithEncoder& UL_Motor = wheelMotors[0];
+//     MotorWithEncoder& UR_Motor = wheelMotors[1];
+//     MotorWithEncoder& BL_Motor = wheelMotors[2];
+//     MotorWithEncoder& BR_Motor = wheelMotors[3];
+    
+//     int rampUpMaxIter = (int) (rampUpTimeMs/MOTOR_WHEEL_ACTUATION_PERIOD);
+//     double upPwmIncrement = (maxPWM-initialPWM) / rampUpMaxIter;
+//     double currentPWM = initialPWM;
+
+//     //write formatted message to print the headers for the csv file
+//     char formattedMessage[BUFFER_SIZE];
+//     snprintf(
+//             formattedMessage, 
+//             sizeof(formattedMessage), 
+//             "PWM;UL(ticks/sample);UR(ticks/sample);BL(ticks/sample);BR(ticks/sample)\n"
+//         );
+        
+//         //Serial.println(formattedMessage);
+//         vTaskDelay(10 / portTICK_PERIOD_MS);
+//         //xQueueSend(xQueue_wifi, &formattedMessage, 0);
+//         // client.send(formattedMessage);
+
+//         // Send formatted message
+//         webSocket.sendTXT(formattedMessage);
+//         Serial.println("Sent MEssage from ESP32");
+
+//     int32_t a, b, c, d;
+//     // Increasing Velocity
+//     for (int i = 0; i < rampUpMaxIter; i++) {
+
+
+//         currentPWM += upPwmIncrement;
+
+
+//         //Serial.println(upPwmIncrement);
+//         //Serial.println(currentPWM);
+//         //Serial.println(rampUpMaxIter);
+
+//         //when testing, just uncomment whichever motor you want to test
+//         UL_Motor.set_motor_PWM(currentPWM);
+//         UR_Motor.set_motor_PWM(currentPWM);
+//         //BL_Motor.set_motor_PWM(currentPWM);
+//         //BR_Motor.set_motor_PWM(currentPWM);
+        
+//         delay_with_encoder(MOTOR_WHEEL_ACTUATION_PERIOD, wheelMotors);
+
+//         Serial.println("Testing....");
+
+//         a = UL_Motor.update_tick_velocity();
+//         b = UR_Motor.update_tick_velocity();
+//         c = BL_Motor.update_tick_velocity();
+//         d = BR_Motor.update_tick_velocity();
+
+//         //Serial.println(a);
+        
+//         //printing currentPWM, and the ticksPerSample of the motors
+//         snprintf(
+//             formattedMessage, 
+//             sizeof(formattedMessage), 
+//             "%.2f;%d;%d;%d;%d", currentPWM, a, b, c, d
+//         );
+//         //Serial.println(formattedMessage);
+//         vTaskDelay(10 / portTICK_PERIOD_MS);
+//         //xQueueSend(xQueue_wifi, &formattedMessage, 0);
+//         //client.send(formattedMessage);
+
+//         // Send formatted message
+//         webSocket.sendTXT(formattedMessage);
+//         Serial.println("Sent MEssage from ESP32");
+//     }
+
+//     // Serial.printf("Max speed reached.\n");
+//     // Maintain Max Velocity
+//     vTaskDelay((int) maxSpeedTime); // DDELAY
+//     // Serial.printf("Decreasing speed.\n");
+//     // Decreasing Velocity
+//     int rampDownMaxIter = (int) (rampDownTimeMs/MOTOR_WHEEL_ACTUATION_PERIOD);
+//     double downPwmIncrement = (maxPWM-initialPWM) / rampDownMaxIter;
+//     for (int i = 0; i < rampDownMaxIter; i++) {
+//         currentPWM -= downPwmIncrement;
+//         UL_Motor.set_motor_PWM(currentPWM); //UL Top 1
+//         UR_Motor.set_motor_PWM(currentPWM); //
+//         //BL_Motor.set_motor_PWM(currentPWM); //
+//         //BR_Motor.set_motor_PWM(currentPWM); // XX Bottom 2
+//         static int loopCount = 0;
+//         loopCount++;
+//         if (loopCount % 1 == 0) Serial.printf("PWM:%.2f,", currentPWM/100);
+//         yield();  // Allows WiFi to run
+//         delay_with_encoder(MOTOR_WHEEL_ACTUATION_PERIOD, wheelMotors);
+//     }
+//     // Serial.printf("Stopping.\n");
+    
+//     UL_Motor.stop_motor();
+//     UR_Motor.stop_motor();
+//     BL_Motor.stop_motor();
+//     BR_Motor.stop_motor();
+// }
+
 void forward_hard_coded_with_encoder(double initialPWM, double maxPWM, double rampUpTimeMs, double maxSpeedTime, double rampDownTimeMs, MotorWithEncoder (&wheelMotors)[4]) {
     // Setting up references
     MotorWithEncoder& UL_Motor = wheelMotors[0];
     MotorWithEncoder& UR_Motor = wheelMotors[1];
     MotorWithEncoder& BL_Motor = wheelMotors[2];
     MotorWithEncoder& BR_Motor = wheelMotors[3];
-    
-    int rampUpMaxIter = (int) (rampUpTimeMs/MOTOR_WHEEL_ACTUATION_PERIOD);
-    double upPwmIncrement = (maxPWM-initialPWM) / rampUpMaxIter;
-    double currentPWM = initialPWM;
-    // Increasing Velocity
-    for (int i = 0; i < rampUpMaxIter; i++) {
-        currentPWM += upPwmIncrement;
-        UL_Motor.set_motor_PWM(currentPWM);
-        UR_Motor.set_motor_PWM(currentPWM);
-        BL_Motor.set_motor_PWM(currentPWM);
-        BR_Motor.set_motor_PWM(currentPWM);
-        
-        delay_with_encoder(MOTOR_WHEEL_ACTUATION_PERIOD, wheelMotors);
-    }
 
-    // Serial.printf("Max speed reached.\n");
-    // Maintain Max Velocity
-    delay((int) maxSpeedTime);
-    // Serial.printf("Decreasing speed.\n");
-    // Decreasing Velocity
-    int rampDownMaxIter = (int) (rampDownTimeMs/MOTOR_WHEEL_ACTUATION_PERIOD);
-    double downPwmIncrement = (maxPWM-initialPWM) / rampDownMaxIter;
-    for (int i = 0; i < rampDownMaxIter; i++) {
-        currentPWM -= downPwmIncrement;
-        UL_Motor.set_motor_PWM(currentPWM);
-        UR_Motor.set_motor_PWM(currentPWM);
-        BL_Motor.set_motor_PWM(currentPWM);
-        BR_Motor.set_motor_PWM(currentPWM);
-        static int loopCount = 0;
-        loopCount++;
-        if (loopCount % 1 == 0) Serial.printf("PWM:%.2f,", currentPWM/100);
-        delay_with_encoder(MOTOR_WHEEL_ACTUATION_PERIOD, wheelMotors);
+    enum MotorState { RAMP_UP, MAX_SPEED, RAMP_DOWN, STOPPED };
+    MotorState currentState = RAMP_UP;
+
+    unsigned long lastUpdateTime = millis();
+    double currentPWM = initialPWM;
+    int currentIter = 0;
+
+    int rampUpMaxIter = (int)(rampUpTimeMs / MOTOR_WHEEL_ACTUATION_PERIOD);
+    double upPwmIncrement = (maxPWM - initialPWM) / rampUpMaxIter;
+
+    int rampDownMaxIter = (int)(rampDownTimeMs / MOTOR_WHEEL_ACTUATION_PERIOD);
+    double downPwmIncrement = (maxPWM - initialPWM) / rampDownMaxIter;
+
+    bool isMotorRunning = true;
+
+    while (isMotorRunning) {
+        webSocket.loop();  // Maintain WebSocket connection
+        unsigned long now = millis();
+
+        switch (currentState) {
+            case RAMP_UP:
+                if (currentIter < rampUpMaxIter && now - lastUpdateTime >= MOTOR_WHEEL_ACTUATION_PERIOD) {
+                    lastUpdateTime = now;
+                    currentPWM += upPwmIncrement;
+                    UL_Motor.set_motor_PWM(currentPWM); // Top Right (UR)
+                    UR_Motor.set_motor_PWM(currentPWM); // Bottom Right (BR)
+                    BL_Motor.set_motor_PWM(currentPWM); // Bottom left (BL)
+                    BR_Motor.set_motor_PWM(currentPWM); // Top Left (UL)
+                    
+                    delay_with_encoder(MOTOR_WHEEL_ACTUATION_PERIOD, wheelMotors);
+                    
+                    sendMotorData(currentPWM, UL_Motor, UR_Motor, BL_Motor, BR_Motor);
+                    currentIter++;
+                } else if (currentIter >= rampUpMaxIter) {
+                    currentState = MAX_SPEED;
+                    lastUpdateTime = now;
+                }
+                break;
+
+            case MAX_SPEED:
+                if (now - lastUpdateTime >= maxSpeedTime) {
+                    currentState = RAMP_DOWN;
+                    currentIter = 0;
+                    lastUpdateTime = now;
+                }
+                break;
+
+            case RAMP_DOWN:
+                if (currentIter < rampDownMaxIter && now - lastUpdateTime >= MOTOR_WHEEL_ACTUATION_PERIOD) {
+                    lastUpdateTime = now;
+                    currentPWM -= downPwmIncrement;
+                    UL_Motor.set_motor_PWM(currentPWM); //U Top 1
+                    UR_Motor.set_motor_PWM(currentPWM); // U Top 2
+                    BL_Motor.set_motor_PWM(currentPWM); // B Top 1
+                    BR_Motor.set_motor_PWM(currentPWM); // B Top 2
+                    
+                    delay_with_encoder(MOTOR_WHEEL_ACTUATION_PERIOD, wheelMotors);
+                    
+                    currentIter++;
+                } else if (currentIter >= rampDownMaxIter) {
+                    currentState = STOPPED;
+                }
+                break;
+
+            case STOPPED:
+                UL_Motor.stop_motor();
+                UR_Motor.stop_motor();
+                BL_Motor.stop_motor();
+                BR_Motor.stop_motor();
+                isMotorRunning = false;
+                break;
+        }
     }
-    // Serial.printf("Stopping.\n");
-    
-    UL_Motor.stop_motor();
-    UR_Motor.stop_motor();
-    BL_Motor.stop_motor();
-    BR_Motor.stop_motor();
 }
+
+void sendMotorData(double currentPWM, MotorWithEncoder& UL_Motor, MotorWithEncoder& UR_Motor, MotorWithEncoder& BL_Motor, MotorWithEncoder& BR_Motor) {
+    int32_t a = UL_Motor.update_tick_velocity();
+    int32_t b = UR_Motor.update_tick_velocity();
+    int32_t c = BL_Motor.update_tick_velocity();
+    int32_t d = BR_Motor.update_tick_velocity();
+
+    char formattedMessage[BUFFER_SIZE];
+    snprintf(formattedMessage, sizeof(formattedMessage), "%.2f;%d;%d;%d;%d", currentPWM, a, b, c, d);
+    
+    webSocket.sendTXT(formattedMessage);
+}
+// void delay_with_encoder(unsigned long delayMs, MotorWithEncoder (&wheelMotors)[4]) {
+//     // Setting up references
+//     MotorWithEncoder& UL_Motor = wheelMotors[0];
+//     MotorWithEncoder& UR_Motor = wheelMotors[1];
+//     MotorWithEncoder& BL_Motor = wheelMotors[2];
+//     MotorWithEncoder& BR_Motor = wheelMotors[3];
+
+//     int a, b, c, d;
+
+//     unsigned long previousTime = millis();
+    
+//     unsigned long endTime = previousTime + delayMs;
+//     for(;;){
+
+//         unsigned long currentTime = millis();
+
+//         a = UL_Motor.update_tick_velocity();
+//         b = UR_Motor.update_tick_velocity();
+//         c = BL_Motor.update_tick_velocity();
+//         d = BR_Motor.update_tick_velocity();
+
+//         static int loopCount = 0;
+//         if (loopCount % 2 == 0) {
+//             char buffer [64];
+//             sprintf(buffer, "1:%d,2:%d,3:%d,4:%d\n", a, b, c, d);
+            
+//         }
+//         loopCount++;
+//         vTaskDelay(MOTOR_WHEEL_ACTUATION_PERIOD);
+//         if (endTime - currentTime <= 0) {
+//            return;
+//         }
+//     }
+// }
 
 void delay_with_encoder(unsigned long delayMs, MotorWithEncoder (&wheelMotors)[4]) {
     // Setting up references
@@ -196,27 +383,23 @@ void delay_with_encoder(unsigned long delayMs, MotorWithEncoder (&wheelMotors)[4
 
     int a, b, c, d;
 
-    unsigned long previousTime = millis();
-    unsigned long endTime = previousTime + delayMs;
-    for(;;){
-        unsigned long currentTime = millis();
-        if (currentTime-previousTime >= MOTOR_WHEEL_ENCODER_PERIOD) {
-            previousTime = currentTime;
-            a = UL_Motor.update_tick_velocity();
-            b = UR_Motor.update_tick_velocity();
-            c = BL_Motor.update_tick_velocity();
-            d = BR_Motor.update_tick_velocity();
+    unsigned long startTime = millis();
+    unsigned long endTime = startTime + delayMs;
 
-            static int loopCount = 0;
-            if (loopCount % 2 == 0) {
-                char buffer [64];
-                sprintf(buffer, "1:%d,2:%d,3:%d,4:%d\n", a, b, c, d);
-                client.send(buffer);
-            }
-            loopCount++;
+    while (millis() < endTime) {  // Exit condition fixed
+        // Update encoder values
+        a = UL_Motor.update_tick_velocity();
+        b = UR_Motor.update_tick_velocity();
+        c = BL_Motor.update_tick_velocity();
+        d = BR_Motor.update_tick_velocity();
+
+        static int loopCount = 0;
+        if (loopCount % 2 == 0) {
+            char buffer[64];
+            sprintf(buffer, "1:%d,2:%d,3:%d,4:%d\n", a, b, c, d);
         }
-        if (endTime - currentTime > delayMs) {
-            return;
-        }
+        loopCount++;
+
+        vTaskDelay(pdMS_TO_TICKS(MOTOR_WHEEL_ACTUATION_PERIOD)); // Use FreeRTOS macro for correct timing
     }
 }
