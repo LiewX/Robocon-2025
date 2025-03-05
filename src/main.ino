@@ -6,12 +6,12 @@
 #define PWM_PIN 26
 #define ENCODER_PIN 27
 #define SETPOINT_TEST 4 
-Encoder encoder(ENCODER_PIN,6,100,3000UL,8000UL); 
-PID_Controller PID_stuffs(2,0,0.5, 100, 0,2750);
+Encoder encoder(ENCODER_PIN,6,100,2300UL,7000UL); 
+PID_Controller PID_stuffs(1,0,0, 100, 0,3500);
 float cur_rpm=0;
 int pwm_set_val=0;
 double PID_out=0;
-int setpoint_val;
+int setpoint_val=3250;
 void setup() {
   // put your setup code here, to run once:
   pinMode(PWM_PIN, OUTPUT);
@@ -21,13 +21,14 @@ void setup() {
   
 }
 
+
 void loop() {
   // put your main code here, to run repeatedly:
-  setpoint_val=analogRead(SETPOINT_TEST)/2;
+  //setpoint_val=analogRead(SETPOINT_TEST)/2;
   PID_stuffs.setSetpoint(setpoint_val);
   cur_rpm=encoder.getRPM();
   PID_out=PID_stuffs.compute(setpoint_val,cur_rpm);
-  pwm_set_val=(PID_out+241.48)/10.737;
+  pwm_set_val=(PID_out+70.232)/13.041;
 
   if (pwm_set_val>255)
   {
