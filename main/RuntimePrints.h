@@ -7,4 +7,4 @@
 #define PRINT_PID_OUTPUT_PLUS_FEEDFORWARD   0
 #define PRINT_CPU_UTILIZATION               1
 // Serial
-#define PRINT_FREE_STACK_ON_EACH_TASKS      1
+#define PRINT_FREE_STACK_ON_EACH_TASKS      0

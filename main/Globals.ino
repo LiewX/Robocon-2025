@@ -69,6 +69,9 @@ MotorWithEncoder wheelMotors [4] = {UL_Motor, UR_Motor, BL_Motor, BR_Motor};
 // Inputs for all 4 wheel motors computed from PD velocity controller.
 double wheelMotorPs4Inputs [4] = {0, 0, 0, 0};          // Raw velocity calculated from PS4 analog stick
 
+// Flag to send wheel encoder values to WiFi
+bool sendWheelEncoderToWifi = 0;
+
 /*========================================================================================
 =                                PS4 GLOBAL VARIABLES                                    =
 ========================================================================================*/

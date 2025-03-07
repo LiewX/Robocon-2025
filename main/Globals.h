@@ -22,6 +22,9 @@ extern MotorWithEncoder BR_Motor; // Bottom Right Wheel Motor
 extern MotorWithEncoder wheelMotors [4];
 extern double wheelMotorPs4Inputs [4];          // Raw velocity calculated from PS4 analog stick
 
+// Flag to send wheel encoder values to WiFi
+extern bool sendWheelEncoderToWifi;
+
 /*========================================================================================
 =                                PS4 GLOBAL VARIABLES                                    =
 ========================================================================================*/
@@ -53,8 +56,9 @@ struct I2cDataPacket {
 =                                         RTOS                                           =
 ========================================================================================*/
 // Semaphores (Note: Initialize these semaphores in main.ino )
-extern SemaphoreHandle_t xMutex_wheelMotorPs4Inputs;  // Mutex (Mutual Exclusion Semaphore) for ps4StickOutputs global var
-extern SemaphoreHandle_t bsem_;  // Binary semaphore to indicate that new data is acquired in ps4StickOutputs global var
+extern SemaphoreHandle_t xMutex_wheelMotorPs4Inputs;    // Mutex (Mutual Exclusion Semaphore) for ps4StickOutputs global var
+extern SemaphoreHandle_t xMutex_sendWheelEncoderToWifi; // Mutex for global var sendWheelEncoderToWifi
+extern SemaphoreHandle_t bsem_callibrateWheelMotor;     // Binary semaphore to indicate that new data is acquired in ps4StickOutputs global var
 
 // Queue Handles
 extern QueueHandle_t xQueue_wifi;
