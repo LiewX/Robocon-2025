@@ -173,7 +173,7 @@ void setup(){
     // Display blinking LED to indicate start of program.
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
-    Serial.println("Starting program.");
+    Serial.println("Starting program."); 
     vTaskDelay(pdMS_TO_TICKS(500));
     digitalWrite(LED_PIN, LOW);
 
@@ -361,27 +361,30 @@ void task_send_to_i2c(void *pvParameters) {
 
 // Task to callibrate motor wheels due to different inertia of the wheels
 void task_callibrate_wheel_motor(void *pvParemeters) {
-    for (;;) {
-        double initialPWM = 0;
-        double maxPWM = 60;
-        double rampUpTimeMs = 9000;
-        double maxSpeedTime = 5000;
-        double rampDownTimeMs = 9000;
+    // Callibration parameters
+    double initialPWM = 0;
+    double maxPWM = 60;
+    double rampUpTimeMs = 9000;
+    double maxSpeedTime = 5000;
+    double rampDownTimeMs = 9000;
 
-        // Setting up alias
-        MotorWithEncoder& UL_Motor = wheelMotors[0];
-        MotorWithEncoder& UR_Motor = wheelMotors[1];
-        MotorWithEncoder& BL_Motor = wheelMotors[2];
-        MotorWithEncoder& BR_Motor = wheelMotors[3];
+    int rampUpMaxIter = (int)(rampUpTimeMs / MOTOR_WHEEL_ACTUATION_PERIOD);
+    double upPwmIncrement = (maxPWM - initialPWM) / rampUpMaxIter;
+    int rampDownMaxIter = (int)(rampDownTimeMs / MOTOR_WHEEL_ACTUATION_PERIOD);
+    double downPwmIncrement = (maxPWM - initialPWM) / rampDownMaxIter;
+   
+    // Setting up alias
+    MotorWithEncoder& UL_Motor = wheelMotors[0];
+    MotorWithEncoder& UR_Motor = wheelMotors[1];
+    MotorWithEncoder& BL_Motor = wheelMotors[2];
+    MotorWithEncoder& BR_Motor = wheelMotors[3];
+
+    for (;;) {
+        // When task is first created or has finished 1 iteration, suspend itself
+        vTaskSuspend(NULL);
 
         double currentPWM = initialPWM;
         int currentIter = 0;
-
-        int rampUpMaxIter = (int)(rampUpTimeMs / MOTOR_WHEEL_ACTUATION_PERIOD);
-        double upPwmIncrement = (maxPWM - initialPWM) / rampUpMaxIter;
-
-        int rampDownMaxIter = (int)(rampDownTimeMs / MOTOR_WHEEL_ACTUATION_PERIOD);
-        double downPwmIncrement = (maxPWM - initialPWM) / rampDownMaxIter;
 
         // Ramp up
         if (currentIter < rampUpMaxIter) {
@@ -413,7 +416,5 @@ void task_callibrate_wheel_motor(void *pvParemeters) {
         UR_Motor.stop_motor();
         BL_Motor.stop_motor();
         BR_Motor.stop_motor();
-
-        vTaskDelete(NULL);
     }
 }
