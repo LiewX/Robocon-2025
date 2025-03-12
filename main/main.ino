@@ -15,13 +15,14 @@
  * - Collecting data and applying values to software compensation code for intertia imbalance of the wheels
  * 
  * Last changed:
- * - Created new task for callibrating wheel motors
+ * - Rectify new task "Task - Callibrate Wheel Motors"
  * - Updated update_encoder task to print through WiFi with a variable flag protected by semaphore
  * 
  * To be tested:
  * - Pin assignment and open loop wheel motion on robot through PS4
  * - Communication of PS4 button presses through I2C
  * - Get encoder value data
+ * - Testing new task "Task - Callibrate Wheel Motors"
 */
 
 // Global tasks names
@@ -362,17 +363,16 @@ void task_send_to_i2c(void *pvParameters) {
 // Task to callibrate motor wheels due to different inertia of the wheels
 void task_callibrate_wheel_motor(void *pvParemeters) {
     // Callibration parameters
-    double initialPWM = 0;
-    double maxPWM = 60;
+    double initialPwm = 0;
+    double targetPwm = 60;
     double rampUpTimeMs = 9000;
     double maxSpeedTime = 5000;
     double rampDownTimeMs = 9000;
 
-    int rampUpMaxIter = (int)(rampUpTimeMs / MOTOR_WHEEL_ACTUATION_PERIOD);
-    double upPwmIncrement = (maxPWM - initialPWM) / rampUpMaxIter;
-    int rampDownMaxIter = (int)(rampDownTimeMs / MOTOR_WHEEL_ACTUATION_PERIOD);
-    double downPwmIncrement = (maxPWM - initialPWM) / rampDownMaxIter;
-   
+    int currentPwm = initialPwm;
+    TickType_t speedUpDelayAmount = rampUpTimeMs / (targetPwm - currentPwm) + 0.5;
+    TickType_t speedDownDelayAmount = rampUpTimeMs / (targetPwm - currentPwm) + 0.5;
+
     // Setting up alias
     MotorWithEncoder& UL_Motor = wheelMotors[0];
     MotorWithEncoder& UR_Motor = wheelMotors[1];
@@ -383,33 +383,30 @@ void task_callibrate_wheel_motor(void *pvParemeters) {
         // When task is first created or has finished 1 iteration, suspend itself
         vTaskSuspend(NULL);
 
-        double currentPWM = initialPWM;
-        int currentIter = 0;
-
         // Ramp up
-        if (currentIter < rampUpMaxIter) {
-            currentPWM += upPwmIncrement;
-            UL_Motor.set_motor_PWM(currentPWM); // Top Right (UR)
-            UR_Motor.set_motor_PWM(currentPWM); // Bottom Right (BR)
-            BL_Motor.set_motor_PWM(currentPWM); // Bottom left (BL)
-            BR_Motor.set_motor_PWM(currentPWM); // Top Left (UL)
-            currentIter++;
-            vTaskDelay(MOTOR_WHEEL_ACTUATION_PERIOD);
+        if (currentPwm < targetPwm) {
+            currentPwm += 2.55;     // increment equals to 1 pwm bit
+            UL_Motor.set_motor_PWM(currentPwm); // Top Right (UR)
+            UR_Motor.set_motor_PWM(currentPwm); // Bottom Right (BR)
+            BL_Motor.set_motor_PWM(currentPwm); // Bottom left (BL)
+            BR_Motor.set_motor_PWM(currentPwm); // Top Left (UL)
+            vTaskDelay(speedUpDelayAmount);
         }
 
         // Maintain max speed
         vTaskDelay(maxSpeedTime);
 
         // Ramp down
-        if (currentIter < rampDownMaxIter) {
-            currentPWM -= downPwmIncrement;
-            UL_Motor.set_motor_PWM(currentPWM); //U Top 1
-            UR_Motor.set_motor_PWM(currentPWM); // U Top 2
-            BL_Motor.set_motor_PWM(currentPWM); // B Top 1
-            BR_Motor.set_motor_PWM(currentPWM); // B Top 2
-            currentIter++;
-            vTaskDelay(MOTOR_WHEEL_ACTUATION_PERIOD);
+        if (currentPwm > targetPwm) {
+            currentPwm -= 2.55;     // increment equals to 1 pwm bit
+            UL_Motor.set_motor_PWM(currentPwm); // Top Right (UR)
+            UR_Motor.set_motor_PWM(currentPwm); // Bottom Right (BR)
+            BL_Motor.set_motor_PWM(currentPwm); // Bottom left (BL)
+            BR_Motor.set_motor_PWM(currentPwm); // Top Left (UL)
+            vTaskDelay(speedDownDelayAmount);
         }
+
+        currentPwm = initialPwm;
 
         // Stop
         UL_Motor.stop_motor();
