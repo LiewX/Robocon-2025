@@ -1,6 +1,6 @@
 // https://github.com/curiores/ArduinoTutorials/tree/main
 // BasicFilter -> ArduinoImplementations -> LowPass -> LowPass2.0
-
+#pragma once
 template<int order>  // order is 1 or 2
 class LowPass {
 private:
