@@ -4,16 +4,24 @@
 #include "math.h"
 #include "Wire.h"
 #include "Utils.h"
+#include "Hood.h"
 
 #define PWM_PIN 26
 #define ENCODER_PIN 27
 #define SETPOINT_TEST 4
+#define HALL_PIN 13
+#define ANTICLOCKWISE_PIN 12
+#define CLOCKWISE_PIN 25
+#define HOOD_LIM_SW 32
 #define FLYWHEEL_MOTOR_ACTUATION_PERIOD 100
+#define HOOD_ACTUATION_PERIOD 100
+
 #define SEND_TO_I2C_PERIOD 150
 #define BUFFER_SIZE 128
 
 Encoder encoder(ENCODER_PIN,6,100,2300UL,7000UL); 
 PID_Controller PID_stuffs(1,0,0, 100, 0,3500);
+Hood hoodstuffs(HALL_PIN,CLOCKWISE_PIN,ANTICLOCKWISE_PIN,HOOD_LIM_SW);
 
 // Define a struct for the I2C data packet with const char* for data
 struct I2cDataPacket {
@@ -23,9 +31,10 @@ struct I2cDataPacket {
 
 // Function prototypes for tasks
 void task_actuate_flywheel_motor(void *pvParameters);
-
+void task_actuate_Hood(void *pvParameters);
 // Task Handles
 TaskHandle_t xTask_ActuateFlywheelMotors;
+TaskHandle_t xTask_ActuateHood;
 
 // Queue Handles
 QueueHandle_t xQueue_i2c;
@@ -50,7 +59,6 @@ void setup() {
     // Create tasks
     // Arguments: Task function, Task name, Stack size (bytes), Parameters, Priority (higher numerical value means a more critical priority), Task handle
     BaseType_t taskCreation_ActuateFlywheelMotors = xTaskCreate(task_actuate_flywheel_motor, "Task - Actuate Flywheel Motors", 4096, NULL, 6, &xTask_ActuateFlywheelMotors);
-
     // Check creation status for each task
     check_task_creation(creationStatus, taskCreation_ActuateFlywheelMotors, "Task - Actuate Flywheel Motors");
 
@@ -83,14 +91,11 @@ void task_actuate_flywheel_motor(void *pvParameters) {
     int setpoint_val=3250;
 
     for (;;) {
-        PID_stuffs.setSetpoint(setpoint_val);
-        cur_rpm=encoder.getRPM();
-        PID_out=PID_stuffs.compute(setpoint_val,cur_rpm);
-        pwm_set_val=(PID_out+70.232)/13.041;
 
         PID_stuffs.setSetpoint(setpoint_val);
         cur_rpm=encoder.getRPM();
         PID_out=PID_stuffs.compute(setpoint_val,cur_rpm);
+        // y=13.041*x-70.232 as the transfer function of 
         pwm_set_val=(PID_out+70.232)/13.041;
         analogWrite(PWM_PIN,floorf(pwm_set_val));
 
