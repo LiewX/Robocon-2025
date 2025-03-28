@@ -4,7 +4,7 @@ import numpy as np
 import math
 import time
 # Load the model
-yolo = YOLO('bestbb.pt')
+yolo = YOLO('best.pt')
 
 # Load the video capture
 videoCap = cv2.VideoCapture("testvid4.mp4")
@@ -109,7 +109,8 @@ while True:
                     #    for i in corners:
                     #        x,y = i.ravel()
                     #        cv2.circle(edges,(int(x),int(y)),3,255,-1)
-                    
+                    print(np.where(output))
+
                     
 
                     
@@ -123,7 +124,7 @@ while True:
                     cv2.putText(frame, f'Distance: {distance:.2f} m', (x1, y2), cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 2)
 
                     # Display the edge-detected ROI
-                    cv2.imshow("Edge Detection (ROI)", edges)
+                    cv2.imshow("Edge Detection (ROI)", output)
 
     # Show the frame
     cv2.imshow('frame', frame)
