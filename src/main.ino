@@ -16,10 +16,6 @@
 
 #define PWM_PIN 27
 #define FLYWHEEL_ENCODER_PIN 26
-#define HALL_PIN 13
-#define ANTICLOCKWISE_PIN 12
-#define CLOCKWISE_PIN 25
-#define HOOD_LIM_SW 32
 #define FLYWHEEL_MOTOR_ACTUATION_PERIOD 100
 #define HOOD_MOTOR_ACTUATION_PERIOD 100
 #define SEND_TO_I2C_PERIOD 150
@@ -31,7 +27,12 @@
 
 Encoder flywheelEncoder(FLYWHEEL_ENCODER_PIN, 6, 100, 2300UL, 7000UL); 
 PID_Controller PID_stuffs(1, 0, 0, 100, 0, 3500);
-Hood hoodstuffs(HALL_PIN,CLOCKWISE_PIN,ANTICLOCKWISE_PIN,HOOD_LIM_SW);
+
+// #define HALL_PIN 13
+// #define ANTICLOCKWISE_PIN 12
+// #define CLOCKWISE_PIN 25
+// #define HOOD_LIM_SW 32
+// Hood hoodstuffs(HALL_PIN,CLOCKWISE_PIN,ANTICLOCKWISE_PIN,HOOD_LIM_SW);
 
 // Define a struct for the I2C data packet with const char* for data
 struct I2cDataPacket {
