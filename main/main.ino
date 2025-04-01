@@ -9,6 +9,7 @@
 #include <ESP32Encoder.h> //https://github.com/madhephaestus/ESP32Encoder
 #include "Wire.h"
 #include "CpuUtilization.h"
+#include "IMU.h"
 
 /* 
  * To be implemented:
@@ -31,7 +32,8 @@ const char* task3Name = "Task - Actuate Motors";              // Actuate Wheel M
 const char* task4Name = "Task - WebSocket Handler";           // WebSocket Handler
 const char* task5Name = "Task - Send WiFi Data";              // Send Data to WiFi
 const char* task6Name = "Task - Send I2C Data";               // Send Data to I2C
-const char* task7Name = "Task - Callibrate Wheel Motors";     // Send Data to I2C
+const char* task7Name = "Task - Callibrate Wheel Motors";     // Calibrate Wheel Motors
+const char* task8Name = "Task - Update IMU";                  // IMU Sampling
 
 // Global class variable for calculating CPU Utilization for each task
 TaskCpuUtilization UtilPs4Sampling      (PS4_SAMPLING_PERIOD,           task1Name);
@@ -40,6 +42,7 @@ TaskCpuUtilization UtilActuateMotors    (MOTOR_WHEEL_ACTUATION_PERIOD,  task3Nam
 TaskCpuUtilization UtilWebSocketHandler (WEBSOCKET_HANDLING_PERIOD,     task4Name);
 TaskCpuUtilization UtilSendToWifi       (SEND_TO_WIFI_PERIOD,           task5Name);
 TaskCpuUtilization UtilSendToI2c        (SEND_TO_I2C_PERIOD,            task6Name);
+TaskCpuUtilization UtilUpdateIMU        (UPDATE_IMU_PERIOD,             task8Name);
 
 // Function prototypes for setup functions
 void websocket_setup();
@@ -53,6 +56,7 @@ void task_websocket_handler     (void *pvParameters);
 void task_send_to_wifi          (void *pvParameters);
 void task_send_to_i2c           (void *pvParameters);
 void task_callibrate_wheel_motor(void *pvParameters);
+void task_update_imu         (void *pvParameters);
 
 // Task Handles
 TaskHandle_t xTask_Ps4Sampling;
@@ -62,6 +66,7 @@ TaskHandle_t xTask_WebsocketHandler;
 TaskHandle_t xTask_SendToWiFi;
 TaskHandle_t xTask_SendToI2C;
 TaskHandle_t xTask_CallibrateWheelMotor;
+TaskHandle_t xTask_UpdateIMU;
 
 // Semaphore Handles
 SemaphoreHandle_t xMutex_wheelMotorPs4Inputs;
@@ -116,6 +121,7 @@ void setup(){
     // Setup
     websocket_setup();  // WebSocket Server Setup
     ps4_setup();        // PS4 Controller Setup
+    mpu_setup();        // MPU6050 Setup
     Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);  // Initialize I2C
     
     // Task creation result variables
@@ -126,6 +132,7 @@ void setup(){
     BaseType_t taskCreation_SendToWiFi;
     BaseType_t taskCreation_SendToI2C;
     BaseType_t taskCreation_CallibrateWheelMotors;
+    BaseType_t taskCreation_UpdateIMU;
 
     bool creationStatus = 1; // Creation status flag for all FreeRTOS kernel objects
     // Create Mutex (Mutual Exclusion Semaphore) for global variables and binary semaphores
@@ -155,6 +162,8 @@ void setup(){
     taskCreation_SendToWiFi             = xTaskCreate(task_send_to_wifi,            "Task - Send Data",                 2048, NULL, 3, &xTask_SendToWiFi);
     taskCreation_SendToI2C              = xTaskCreate(task_send_to_i2c,             "Task - Send I2C Data",             2048, NULL, 2, &xTask_SendToI2C);
     taskCreation_CallibrateWheelMotors  = xTaskCreate(task_callibrate_wheel_motor,  "Task - Callibrate Wheel Motors",   3072, NULL, 7, &xTask_CallibrateWheelMotor);
+    taskCreation_UpdateIMU           = xTaskCreate(task_update_imu,               "Task - Update IMU",               3072, NULL, 4, &xTask_UpdateIMU);        // NOTE not sure what priority level 
+
     // Check creation status for each task
     check_task_creation(creationStatus, taskCreation_ps4Sampling,           task1Name);
     check_task_creation(creationStatus, taskCreation_UpdateEncoders,        task2Name);
@@ -163,6 +172,7 @@ void setup(){
     check_task_creation(creationStatus, taskCreation_SendToWiFi,            task5Name);
     check_task_creation(creationStatus, taskCreation_SendToI2C,             task6Name);
     check_task_creation(creationStatus, taskCreation_CallibrateWheelMotors, task7Name);
+    check_task_creation(creationStatus, taskCreation_UpdateIMU,            task8Name);
 
     // If any of the semaphore/mutex and queue has failed to create, exit
     if (creationStatus == 0) {
@@ -187,6 +197,7 @@ void setup(){
     print_free_stack(xTask_SendToWiFi, task5Name);
     print_free_stack(xTask_SendToI2C, task6Name);
     print_free_stack(xTask_CallibrateWheelMotor, task7Name);
+    print_free_stack(xTask_UpdateIMU, task8Name);
     Serial.printf("Free heap size: %d bytes\n", esp_get_free_heap_size());  
     Serial.printf("Minimum free heap ever: %d bytes\n", esp_get_minimum_free_heap_size()); 
     #endif
@@ -201,6 +212,7 @@ void loop() {
     UtilWebSocketHandler.send_util_to_wifi();
     UtilSendToWifi.send_util_to_wifi();
     UtilSendToI2c.send_util_to_wifi();
+    UtilUpdateIMU.send_util_to_wifi();
     #endif
     vTaskDelay(pdMS_TO_TICKS(CPU_UTIL_CALCULATION_PERIOD));
 }
@@ -417,4 +429,34 @@ void task_callibrate_wheel_motor(void *pvParemeters) {
         BL_Motor.stop_motor();
         BR_Motor.stop_motor();
     }
+}
+
+// this one only collects the data
+void task_update_imu(void *pvParameters) {
+    const TickType_t xFrequency = pdMS_TO_TICKS(UPDATE_IMU_PERIOD); // Set task running frequency
+    TickType_t xLastWakeTime = xTaskGetTickCount();   // Initialize last wake time
+    for (;;) {
+
+        // Set task start time (to calculate for CPU Utilization)
+        UtilUpdateIMU.set_start_time();
+
+        IMUData imuData; 
+        read_raw_gyro_data(); 
+        calculate_orientation();  // Update global yaw, pitch, and roll
+
+        // Store IMU readings into struct
+        imuData.yaw = current_yaw; 
+        imuData.pitch = current_pitch; 
+        imuData.roll = current_roll; 
+
+        // send IMU Data to the I2C queue
+
+
+
+        // Set task end time (to calculate for CPU Utilization)
+        UtilUpdateIMU.set_end_time();
+        // Delay until the next execution time
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    }
+
 }
