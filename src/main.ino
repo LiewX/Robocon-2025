@@ -6,14 +6,20 @@
 #include "Utils.h"
 #include "motor.h"
 #include "globals.h"
+#include "Hood.h"
 
 // To be implemented: task hood actuation
 // To be implemented: pwm deadzone wrapper
 // To be implemented: use internal pull up resistors for encoders
 // Fixed flywheel function: changed to ledcWrite
 
+
 #define PWM_PIN 27
 #define FLYWHEEL_ENCODER_PIN 26
+#define HALL_PIN 13
+#define ANTICLOCKWISE_PIN 12
+#define CLOCKWISE_PIN 25
+#define HOOD_LIM_SW 32
 #define FLYWHEEL_MOTOR_ACTUATION_PERIOD 100
 #define HOOD_MOTOR_ACTUATION_PERIOD 100
 #define SEND_TO_I2C_PERIOD 150
@@ -25,6 +31,7 @@
 
 Encoder flywheelEncoder(FLYWHEEL_ENCODER_PIN, 6, 100, 2300UL, 7000UL); 
 PID_Controller PID_stuffs(1, 0, 0, 100, 0, 3500);
+Hood hoodstuffs(HALL_PIN,CLOCKWISE_PIN,ANTICLOCKWISE_PIN,HOOD_LIM_SW);
 
 // Define a struct for the I2C data packet with const char* for data
 struct I2cDataPacket {
@@ -109,7 +116,7 @@ void task_actuate_flywheel_motor(void *pvParameters) {
         PID_stuffs.setSetpoint(setpoint_val);
         cur_rpm=flywheelEncoder.getRPM();
         PID_out=PID_stuffs.compute(setpoint_val,cur_rpm);
-        pwm_set_val=(PID_out+70.232)/13.041;
+        pwm_set_val=(PID_out+70.232)/13.041; // y=13.041*x-70.232 as the transfer function
 
         pwm_set_val = constrain(pwm_set_val, 0, FLYWHEEL_PWM_MAX_BIT);      // limits value between maximum and minimum
         ledcWrite(flywheelPwmChannel, abs(pwm_set_val));

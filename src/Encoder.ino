@@ -7,6 +7,7 @@ volatile unsigned long Encoder::debounceTime = 20000UL; // Start with MAX_DEBOUN
 unsigned long Encoder::MIN_DEBOUNCE = 8000UL;
 unsigned long Encoder::MAX_DEBOUNCE = 20000UL;
 
+// create class
 Encoder::Encoder(uint8_t encoderPin, int slotsPerRev, int intervaluser,
                 unsigned long minDebounce, unsigned long maxDebounce)
     : encoderPin(encoderPin), slotsPerRev(slotsPerRev),interval(intervaluser),
@@ -14,7 +15,7 @@ Encoder::Encoder(uint8_t encoderPin, int slotsPerRev, int intervaluser,
     MIN_DEBOUNCE = minDebounce;
     MAX_DEBOUNCE = maxDebounce;
 }
-
+// initialise in main.ino to begin the interrupt handling and counts
 void Encoder::begin() {
     pinMode(encoderPin, INPUT);
     attachInterrupt(digitalPinToInterrupt(encoderPin), encoderISR, RISING);
@@ -22,7 +23,7 @@ void Encoder::begin() {
     Lasttime=millis();
     
 }
-
+// reads the current rpm value
 float Encoder::getRPM() {
     unsigned long currentCount;
     unsigned long currentTime = millis();
@@ -39,6 +40,7 @@ float Encoder::getRPM() {
     }
     return rpm;
 }
+// ISR that changes its debouncing range dynamically
 void IRAM_ATTR Encoder::encoderISR() {
     unsigned long currentMicros = micros();
     unsigned long delta = currentMicros - lastEdgeTime;
