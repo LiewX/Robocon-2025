@@ -8,6 +8,7 @@ private:
     double kd;
 
     // PID variables
+    double error;
     double previousError;
     double integral;
     double setpoint;
@@ -31,5 +32,8 @@ public:
     inline void reset();
 
     // Set PID coefficients
-    inline void setCoefficients(double kp, double ki, double kd);
+    inline void set_coefficients(double kp, double ki, double kd);
+
+    // Check if process variable is close to target
+    inline bool is_within_tolerance(double tolerance);
 };

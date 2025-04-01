@@ -4,16 +4,27 @@
 #include "math.h"
 #include "Wire.h"
 #include "Utils.h"
+#include "motor.h"
+#include "globals.h"
 
-#define PWM_PIN 26
-#define ENCODER_PIN 27
-#define SETPOINT_TEST 4
+// To be implemented: task hood actuation
+// To be implemented: pwm deadzone wrapper
+// To be implemented: use internal pull up resistors for encoders
+// Fixed flywheel function: changed to ledcWrite
+
+#define PWM_PIN 27
+#define FLYWHEEL_ENCODER_PIN 26
 #define FLYWHEEL_MOTOR_ACTUATION_PERIOD 100
+#define HOOD_MOTOR_ACTUATION_PERIOD 100
 #define SEND_TO_I2C_PERIOD 150
 #define BUFFER_SIZE 128
+#define FLYWHEEL_PWM_RES 8
+#define FLYWHEEL_PWM_FREQ 10000
+#define FLYWHEEL_PWM_MAX_BIT ((1 << FLYWHEEL_PWM_RES) - 1)
+#define POT_PIN 25
 
-Encoder encoder(ENCODER_PIN,6,100,2300UL,7000UL); 
-PID_Controller PID_stuffs(1,0,0, 100, 0,3500);
+Encoder flywheelEncoder(FLYWHEEL_ENCODER_PIN, 6, 100, 2300UL, 7000UL); 
+PID_Controller PID_stuffs(1, 0, 0, 100, 0, 3500);
 
 // Define a struct for the I2C data packet with const char* for data
 struct I2cDataPacket {
@@ -23,20 +34,26 @@ struct I2cDataPacket {
 
 // Function prototypes for tasks
 void task_actuate_flywheel_motor(void *pvParameters);
+void task_actuate_hood_motor(void* pvParameters);
 
 // Task Handles
 TaskHandle_t xTask_ActuateFlywheelMotors;
+TaskHandle_t xTask_ActuateHoodMotor;
 
 // Queue Handles
 QueueHandle_t xQueue_i2c;
 
-void setup() {
-    // Todo: configure pull up resistors if needed by encoders
+uint8_t flywheelPwmChannel;
 
-    pinMode(PWM_PIN, OUTPUT);
-    pinMode(SETPOINT_TEST, INPUT);
-    Serial.begin(9600);
-    encoder.begin();
+void setup() {
+    Serial.begin(115200);
+    
+    // Flywheel motor pin setup
+    flywheelPwmChannel = Motor::pwmChannelsUsed;
+    ledcSetup(flywheelPwmChannel, FLYWHEEL_PWM_FREQ, FLYWHEEL_PWM_RES);
+    ledcAttachPin(PWM_PIN, flywheelPwmChannel);
+    Motor::pwmChannelsUsed++;
+    flywheelEncoder.begin();
 
     // Create queues
     // Note: These queues are declared in Globals.h so that they can be accessed in any file.
@@ -50,9 +67,11 @@ void setup() {
     // Create tasks
     // Arguments: Task function, Task name, Stack size (bytes), Parameters, Priority (higher numerical value means a more critical priority), Task handle
     BaseType_t taskCreation_ActuateFlywheelMotors = xTaskCreate(task_actuate_flywheel_motor, "Task - Actuate Flywheel Motors", 4096, NULL, 6, &xTask_ActuateFlywheelMotors);
+    BaseType_t taskCreation_ActuateHoodMotor = xTaskCreate(task_actuate_flywheel_motor, "Task - Actuate Flywheel Motors", 4096, NULL, 6, &xTask_ActuateFlywheelMotors);
 
     // Check creation status for each task
     check_task_creation(creationStatus, taskCreation_ActuateFlywheelMotors, "Task - Actuate Flywheel Motors");
+    check_task_creation(creationStatus, taskCreation_ActuateHoodMotor, "Task - Actuate Hood Motor");
 
     // If any of the semaphore/mutex and queue has failed to create, exit
     if (creationStatus == 0) {
@@ -69,7 +88,7 @@ void setup() {
 
 
 void loop() {
-    delay(100);
+    vTaskDelay(10000);
 }
 
 
@@ -77,33 +96,42 @@ void task_actuate_flywheel_motor(void *pvParameters) {
     const TickType_t xFrequency = pdMS_TO_TICKS(FLYWHEEL_MOTOR_ACTUATION_PERIOD); // Set task running frequency
     TickType_t xLastWakeTime = xTaskGetTickCount();   // Initialize last wake time
 
-    float cur_rpm=0;
+    double cur_rpm=0;
     int pwm_set_val=0;
     double PID_out=0;
-    int setpoint_val=3250;
+    double setpoint_val=3250;
 
     for (;;) {
+        int rawValue = analogRead(POT_PIN);      // Read ADC value (0 - 4095)
+        setpoint_val = map(rawValue, 0, 4095, 0, 3250);  // Map to 0 - 3250
+
+
         PID_stuffs.setSetpoint(setpoint_val);
-        cur_rpm=encoder.getRPM();
+        cur_rpm=flywheelEncoder.getRPM();
         PID_out=PID_stuffs.compute(setpoint_val,cur_rpm);
         pwm_set_val=(PID_out+70.232)/13.041;
 
-        PID_stuffs.setSetpoint(setpoint_val);
-        cur_rpm=encoder.getRPM();
-        PID_out=PID_stuffs.compute(setpoint_val,cur_rpm);
-        pwm_set_val=(PID_out+70.232)/13.041;
-        analogWrite(PWM_PIN,floorf(pwm_set_val));
+        pwm_set_val = constrain(pwm_set_val, 0, FLYWHEEL_PWM_MAX_BIT);      // limits value between maximum and minimum
+        ledcWrite(flywheelPwmChannel, abs(pwm_set_val));
 
-        Serial.print("Setpoint:");
-        Serial.print(setpoint_val);
-        Serial.print("|Current RPM:");
-        Serial.print(cur_rpm);
-        Serial.print("|PID RPM:");
-        Serial.print(PID_out);
-        Serial.print("|Current PWM:");
-        Serial.println(pwm_set_val);
-
+        Serial.printf("Setpoint: %.3f | Current RPM: %.3f | PID Output: %d\n", setpoint_val, cur_rpm, pwm_set_val);
+        
         // Delay until the next execution time
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    }
+}
+
+// Position Control for hood
+void task_actuate_hood_motor(void *pvParameters) {
+    const TickType_t xFrequency = pdMS_TO_TICKS(HOOD_MOTOR_ACTUATION_PERIOD); // Set task running frequency
+    TickType_t xLastWakeTime = xTaskGetTickCount();   // Initialize last wake time
+
+    for (;;) {
+        double controlOutput = HoodMotor.PID.compute(0, HoodMotor.get_tick_position());
+        HoodMotor.set_motor_PWM(controlOutput);
+        if (HoodMotor.PID.is_within_tolerance(5)) {
+
+        }
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
