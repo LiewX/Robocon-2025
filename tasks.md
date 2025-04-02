@@ -4,8 +4,6 @@ IMU:
 - create task
 - acquire data through i2c by sending 
 - get gyroscope readings 
-// about done! 
-
 
 
 RECEIVE TASK FOR i2c
@@ -18,8 +16,6 @@ PID:
 - actuate motors 
 
 ## Todo: 
-Calibrate the sensor? 
-
 
 
 ## Changelog
@@ -32,5 +28,9 @@ Calibrate the sensor?
     - initialises the mpu, sets accel and gyro offsets
     - all of these are printed out to serial monitor
 
+3. made the imu into a class rather than a standalone import file, reducing globals
+
+4. next patch! rtos integration and tidied up pid calculations
+- also integration with motors and encoders. hopefully i dont crash the car. 
 
 
