@@ -7,3 +7,4 @@
 #define WEBSOCKET_HANDLING_PERIOD       100
 #define SEND_TO_WIFI_PERIOD             20
 #define SEND_TO_I2C_PERIOD              100
+#define UPDATE_IMU_PERIOD               20

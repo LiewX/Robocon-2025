@@ -8,6 +8,7 @@ private:
     double kd;
 
     // PID variables
+    double error;
     double previousError;
     double integral;
     double setpoint;
@@ -35,4 +36,7 @@ public:
 
     // Set PID coefficients
     inline void setCoefficients(double kp, double ki, double kd);
+
+    // Checks if the process variable error is within the acceptable threshold from the target
+    inline bool PID_Controller::is_within_tolerance(double tolerance);
 };

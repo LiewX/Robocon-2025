@@ -1,9 +1,10 @@
 #include "PID.h"
+#include <math.h>
 
 // Constructor
 PID_Controller::PID_Controller(double kp, double ki, double kd, double period, double outputMin, double outputMax)
     : kp(kp), ki(ki), kd(kd), deltaTime(period), outputMin(outputMin), outputMax(outputMax),
-      previousError(0.0), integral(0.0), setpoint(0.0) {}
+      error(0.0), previousError(0.0), integral(0.0), setpoint(0.0) {}
 
 // Set the desired target value (setpoint)
 inline void PID_Controller::setSetpoint(double target) {
@@ -13,7 +14,7 @@ inline void PID_Controller::setSetpoint(double target) {
 // Compute the PID output
 double PID_Controller::compute(double currentValue) {
     // Calculate error
-    double error = setpoint - currentValue;
+    error = setpoint - currentValue;
 
     // Proportional term
     double proportional = kp * error;
@@ -60,4 +61,11 @@ inline void PID_Controller::setCoefficients(double kp, double ki, double kd) {
     this->kp = kp;
     this->ki = ki;
     this->kd = kd;
+}
+
+// Checks if the process variable error is within the acceptable threshold from the target
+inline bool PID_Controller::is_within_tolerance(double tolerance) {
+    if (abs(error) < tolerance)
+        return true;
+    else return false;
 }

@@ -98,7 +98,7 @@ inline double increment_by_limit(double value, double unclampedIncrement, double
 /**
  * Accepts raw PWM input from PS4 controller. Applies a ramping function and then actuate the wheel motors.
  * @param wheelMotors An array of wheel motor classes passed by reference.
- * @param wheelMotorPs4Inputs Raw duty cycle motor inputs derived from PS4 inputs.
+ * @param motorWheelsPwm Raw duty cycle motor inputs derived from PS4 inputs.
  * @return none
  * @warning Do not use this function for other motors other than wheel motors.
  * @note Example use case - ramp_wheel_PWM(wheelMotors, wheelMotorPWMs);
@@ -107,12 +107,12 @@ void actuate_motor_wheels() {
     double shapedInputs[4] = {0, 0, 0, 0};
 
     // Wait for mutex before getting value from ps4StickInputs
-    if (xSemaphoreTake(xMutex_wheelMotorPs4Inputs, portMAX_DELAY)) {
+    if (xSemaphoreTake(xMutex_wheelMotorPwm, portMAX_DELAY)) {
         // Apply input shaping (ramp function) to raw duty cycle inputs derived from PS4 inputs
         for (int i = 0; i < 4; ++i) {
-            shapedInputs[i] = wheelMotors[i].input_shape_ramp(wheelMotorPs4Inputs[i]);
+            shapedInputs[i] = wheelMotors[i].input_shape_ramp(motorWheelsPwm[i]);
         }
-        xSemaphoreGive(xMutex_wheelMotorPs4Inputs);  // Release the mutex after using the variable
+        xSemaphoreGive(xMutex_wheelMotorPwm);  // Release the mutex after using the variable
     }
     
     // Apply PD to get closed loop input to motor
@@ -158,4 +158,58 @@ void actuate_motor_wheels() {
         // Send the formatted message to the queue
         xQueueSend(xQueue_wifi, &formattedMessage, 0);
     #endif
+}
+
+// Function to convert translation effort, translation angle, and rotation effort to velocity for each wheel motors
+// Implementation method is based on this website: https://seamonsters-2605.github.io/archive/mecanum/
+void update_wheel_pwm(double translationEffort, double translationAngle, double rotationEffort) {
+    double motorPWM [4] = {0, 0, 0, 0}; // temporary variable for motor pwm
+    // Compute motor speeds for omniwheel drive (Equations based on https://seamonsters-2605.github.io/archive/mecanum/)
+    motorPWM[0] = translationEffort*sin(translationAngle + 0.25*PI) + translationAngle; // Upper-left motor
+    motorPWM[1] = translationEffort*sin(translationAngle - 0.25*PI) - translationAngle; // Upper-right motor
+    motorPWM[2] = translationEffort*sin(translationAngle - 0.25*PI) + translationAngle; // Bottom-left motor
+    motorPWM[3] = translationEffort*sin(translationAngle + 0.25*PI) - translationAngle; // Bottom-right motor
+
+    // Map to 0~100 PWM value, output is not clamped and can go up to 200
+    motorPWM[0] = map(motorPWM[0], -MAX_ANALOG_STICK_VALUE, MAX_ANALOG_STICK_VALUE, -100, 100); // Upper-left motor
+    motorPWM[1] = map(motorPWM[1], -MAX_ANALOG_STICK_VALUE, MAX_ANALOG_STICK_VALUE, -100, 100); // Upper-right motor
+    motorPWM[2] = map(motorPWM[2], -MAX_ANALOG_STICK_VALUE, MAX_ANALOG_STICK_VALUE, -100, 100); // Bottom-left motor
+    motorPWM[3] = map(motorPWM[3], -MAX_ANALOG_STICK_VALUE, MAX_ANALOG_STICK_VALUE, -100, 100); // Bottom-right motor
+    // Serial.printf("1: %.2f, 2: %.2f, 3: %.2f, 4: %.2f\n", motorPWM[0], motorPWM[1], motorPWM[2], motorPWM[3]);
+
+    // Motor speed calibration
+    motorPWM[0] = (motorPWM[0]*WHEEL_PWM_FACTOR_CORRECTION_UL);
+    motorPWM[1] = (motorPWM[1]*WHEEL_PWM_FACTOR_CORRECTION_UR);
+    motorPWM[2] = (motorPWM[2]*WHEEL_PWM_FACTOR_CORRECTION_BL);
+    motorPWM[3] = (motorPWM[3]*WHEEL_PWM_FACTOR_CORRECTION_BR);
+
+    if (motorPWM[0] < 0) motorPWM[0] -= WHEEL_PWM_OFFSET_UL; 
+    else motorPWM[0] += WHEEL_PWM_OFFSET_UL;
+
+    if (motorPWM[1] < 0) motorPWM[1] -= WHEEL_PWM_OFFSET_UL;   
+    else motorPWM[1] += WHEEL_PWM_OFFSET_UL;
+
+    if (motorPWM[2] < 0) motorPWM[2] -= WHEEL_PWM_OFFSET_UL;
+    else motorPWM[2] += WHEEL_PWM_OFFSET_UL;
+
+    if (motorPWM[3] < 0) motorPWM[3] -= WHEEL_PWM_OFFSET_UL;
+    else motorPWM[3] += WHEEL_PWM_OFFSET_UL;
+
+    // In case calculated motor speed is above 100, scale motor speeds down so that the maximum is 100
+    double maxInput = max(max(abs(motorPWM[0]), abs(motorPWM[1])), max(abs(motorPWM[2]), abs(motorPWM[3])));
+    if (maxInput > 100.0) {
+        motorPWM[0] =  (motorPWM[0]*100)/maxInput;
+        motorPWM[1] = -(motorPWM[1]*100)/maxInput; // -ve to consider cw and ccw direction
+        motorPWM[2] =  (motorPWM[2]*100)/maxInput; // -ve to consider cw and ccw direction
+        motorPWM[3] = -(motorPWM[3]*100)/maxInput;
+    }
+    
+    // Wait for mutex before modifying motorWheelsPwm
+    if (xSemaphoreTake(xMutex_wheelMotorPwm, portMAX_DELAY)) {
+        motorWheelsPwm[0] = motorPWM[0];
+        motorWheelsPwm[1] = motorPWM[1];
+        motorWheelsPwm[2] = motorPWM[2];
+        motorWheelsPwm[3] = motorPWM[3];
+        xSemaphoreGive(xMutex_wheelMotorPwm);  // Release the mutex after modifying the variable
+    }
 }

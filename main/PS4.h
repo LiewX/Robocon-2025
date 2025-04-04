@@ -1,10 +1,8 @@
 #pragma once
-
 #include <Bluepad32.h>
 #include <Arduino.h>
+#include "Globals.h"
 
-#define MAX_ANALOG_STICK_VALUE 512
-#define PS4_DEADZONE 4
 
 #define SLAVE_PS4_BUTTON_COUNTS 8
 enum Ps4ButtonId : uint8_t {
