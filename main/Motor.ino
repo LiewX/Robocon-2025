@@ -7,8 +7,8 @@
 #include "RuntimePrints.h"
 
 // Constructor for class MotorControl
-Motor::Motor(uint8_t pin1, uint8_t pwmPin, double maxPwmIncrement)
-    : motorDirPin(pin1), motorPwmPin(pwmPin), maxPwmIncrement(maxPwmIncrement), previousDutyCycle(0.0) {
+Motor::Motor(uint8_t pin1, uint8_t pwmPin, double maxPwmIncrement, double maxPwmDecrement)
+    : motorDirPin(pin1), motorPwmPin(pwmPin), maxPwmIncrement(maxPwmIncrement), maxPwmDecrement(maxPwmDecrement), previousDutyCycle(0.0) {
         // Pin Initialisation
         pinMode(pin1, OUTPUT);
         
@@ -63,22 +63,40 @@ void Motor::stop_motor() {
 double Motor::input_shape_ramp(double rawInput) {
     // Find current unclamped increment from controller output
     double unclampedIncrement = rawInput - this->previousDutyCycle;
-    
-    // Limit Increment and return accordingly
-    if (unclampedIncrement > this->maxPwmIncrement) {
-        return this->previousDutyCycle + maxPwmIncrement;
-    }
-    else if (unclampedIncrement < - this->maxPwmIncrement) {
-        return this->previousDutyCycle - maxPwmIncrement;
+
+    // Limit increment, decrement and return accordingly
+    // If accelerating away from 0m/s, use maxPwmIncrement; if decelerating towards 0m/s, use maxPwmDecrement    
+    if (unclampedIncrement > 0) {
+        if (this->previousDutyCycle > 0)
+            return increment_by_limit(this->previousDutyCycle, unclampedIncrement, maxPwmIncrement);
+        else 
+            return increment_by_limit(this->previousDutyCycle, unclampedIncrement, maxPwmDecrement);
     }
     else {
-        return this->previousDutyCycle + unclampedIncrement;
+        if (this->previousDutyCycle > 0)
+            return increment_by_limit(this->previousDutyCycle, unclampedIncrement, maxPwmDecrement);
+        else 
+            return increment_by_limit(this->previousDutyCycle, unclampedIncrement, maxPwmIncrement);
+    }
+}
+
+// Description: Increments/Decrements an unclamped value given a maximum allowable increment value.
+// Function to assist input_shape_ramp function from above.
+inline double increment_by_limit(double value, double unclampedIncrement, double maxIncrement) {
+    if (unclampedIncrement > maxIncrement) {
+        return value + maxIncrement;
+    }
+    else if (unclampedIncrement < - maxIncrement) {
+        return value - maxIncrement;
+    }
+    else {
+        return value + unclampedIncrement;
     }
 }
 
 // Currently open loop
 /**
- * Accepts raw PWM input from PS4 controller. Applies a ramping function and then actuate the wheel motors
+ * Accepts raw PWM input from PS4 controller. Applies a ramping function and then actuate the wheel motors.
  * @param wheelMotors An array of wheel motor classes passed by reference.
  * @param wheelMotorPs4Inputs Raw duty cycle motor inputs derived from PS4 inputs.
  * @return none
@@ -100,12 +118,16 @@ void actuate_motor_wheels() {
     // Apply PD to get closed loop input to motor
     double controlOutput[4] = {0, 0, 0, 0};
     for (int i = 0; i < 4; ++i) {
-        controlOutput[i] = shapedInputs[i] + wheelMotors[i].PID.compute(wheelMotors[i].measuredPwmSpeed);
+        wheelMotors[i].PID.setSetpoint(shapedInputs[i]);
+        controlOutput[i] = shapedInputs[i] + wheelMotors[i].PID.compute(wheelMotors[i].update_tick_velocity());
     }
 
     // Actuate each motors using shaped feedforward inputs and PID output (summed)
     for (int i = 0; i < 4; ++i) {
-        wheelMotors[i].set_motor_PWM(controlOutput[i]);
+        if (abs(controlOutput[i]) > wheelMotors[i].startingPwm)
+            wheelMotors[i].set_motor_PWM(controlOutput[i]);
+        else
+            wheelMotors[i].set_motor_PWM(0);
     }
 
     // Printing in WiFi WebSocket //

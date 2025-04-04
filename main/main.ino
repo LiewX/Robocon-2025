@@ -12,17 +12,15 @@
 
 /* 
  * To be implemented:
- * - Collecting data and applying values to software compensation code for intertia imbalance of the wheels
+ * 
  * 
  * Last changed:
- * - Rectify new task "Task - Callibrate Wheel Motors"
- * - Updated update_encoder task to print through WiFi with a variable flag protected by semaphore
+ * - In the input shaping function for the wheel motor actuation, used another constant to allow for a bigger decrease in input so that the robot to stop faster.
+ * - If PS4 disconnects, deactivate motor wheels
  * 
  * To be tested:
- * - Pin assignment and open loop wheel motion on robot through PS4
  * - Communication of PS4 button presses through I2C
- * - Get encoder value data
- * - Testing new task "Task - Callibrate Wheel Motors"
+ * - Testing new task "Task - Calibrate Wheel Motors"
 */
 
 // Global tasks names
@@ -32,7 +30,7 @@ const char* task3Name = "Task - Actuate Motors";              // Actuate Wheel M
 const char* task4Name = "Task - WebSocket Handler";           // WebSocket Handler
 const char* task5Name = "Task - Send WiFi Data";              // Send Data to WiFi
 const char* task6Name = "Task - Send I2C Data";               // Send Data to I2C
-const char* task7Name = "Task - Callibrate Wheel Motors";     // Send Data to I2C
+const char* task7Name = "Task - Calibrate Wheel Motors";     // Send Data to I2C
 
 // Global class variable for calculating CPU Utilization for each task
 TaskCpuUtilization UtilPs4Sampling      (PS4_SAMPLING_PERIOD,           task1Name);
@@ -53,7 +51,7 @@ void task_actuate_motors        (void *pvParameters);
 void task_websocket_handler     (void *pvParameters);
 void task_send_to_wifi          (void *pvParameters);
 void task_send_to_i2c           (void *pvParameters);
-void task_callibrate_wheel_motor(void *pvParameters);
+void task_calibrate_wheel_motor (void *pvParameters);
 
 // Task Handles
 TaskHandle_t xTask_Ps4Sampling;
@@ -62,12 +60,12 @@ TaskHandle_t xTask_ActuateMotors;
 TaskHandle_t xTask_WebsocketHandler;
 TaskHandle_t xTask_SendToWiFi;
 TaskHandle_t xTask_SendToI2C;
-TaskHandle_t xTask_CallibrateWheelMotor;
+TaskHandle_t xTask_CalibrateWheelMotor;
 
 // Semaphore Handles
 SemaphoreHandle_t xMutex_wheelMotorPs4Inputs;
 SemaphoreHandle_t xMutex_sendWheelEncoderToWifi;
-SemaphoreHandle_t bsem_callibrateWheelMotor;
+SemaphoreHandle_t bsem_calibrateWheelMotor;
 
 // Queue Handles
 QueueHandle_t xQueue_wifi;
@@ -118,26 +116,18 @@ void setup(){
     websocket_setup();  // WebSocket Server Setup
     ps4_setup();        // PS4 Controller Setup
     Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);  // Initialize I2C
-    
-    // Task creation result variables
-    BaseType_t taskCreation_ps4Sampling;
-    BaseType_t taskCreation_UpdateEncoders;
-    BaseType_t taskCreation_ActuateMotors;
-    BaseType_t taskCreation_WebsocketHandler;
-    BaseType_t taskCreation_SendToWiFi;
-    BaseType_t taskCreation_SendToI2C;
-    BaseType_t taskCreation_CallibrateWheelMotors;
 
     bool creationStatus = 1; // Creation status flag for all FreeRTOS kernel objects
+    
     // Create Mutex (Mutual Exclusion Semaphore) for global variables and binary semaphores
     // Note: These semaphores are declared in Globals.h so that they can be accessed in any file.
     xMutex_wheelMotorPs4Inputs = xSemaphoreCreateMutex();       // Mutex for global var ps4StickOutputs
     xMutex_sendWheelEncoderToWifi = xSemaphoreCreateBinary();   // Mutex for global var sendWheelEncoderToWifi
-    bsem_callibrateWheelMotor = xSemaphoreCreateBinary();       // Binary semaphore to indicate that wheel callibration needs to be commenced 
+    bsem_calibrateWheelMotor = xSemaphoreCreateBinary();       // Binary semaphore to indicate that wheel callibration needs to be commenced 
     // Check creation status for each semaphore/mutex
     check_sem_creation(creationStatus, xMutex_wheelMotorPs4Inputs, "Mutex - PS4 Stick Outputs");
     check_sem_creation(creationStatus, xMutex_sendWheelEncoderToWifi, "Mutex - Send Wheel Encoders' Values to WiFi");
-    check_sem_creation(creationStatus, bsem_callibrateWheelMotor, "Binary Semaphore - Placeholder");
+    check_sem_creation(creationStatus, bsem_calibrateWheelMotor, "Binary Semaphore - Placeholder");
 
     // Create queues
     // Note: These queues are declared in Globals.h so that they can be accessed in any file.
@@ -149,13 +139,13 @@ void setup(){
 
     // Create tasks
     // Arguments: Task function, Task name, Stack size (bytes), Parameters, Priority (higher numerical value means a more critical priority), Task handle
-    taskCreation_ps4Sampling            = xTaskCreate(task_ps4_sampling,            "Task - PS4 Sampling",              4096, NULL, 4, &xTask_Ps4Sampling);
-    taskCreation_UpdateEncoders         = xTaskCreate(task_update_encoders,         "Task - Update Encoders",           2048, NULL, 5, &xTask_UpdateEncoders);
-    taskCreation_ActuateMotors          = xTaskCreate(task_actuate_motors,          "Task - Actuate Motors",            4096, NULL, 6, &xTask_ActuateMotors);
-    taskCreation_WebsocketHandler       = xTaskCreate(task_websocket_handler,       "Task - WebSocket Handler",         3072, NULL, 2, &xTask_WebsocketHandler);
-    taskCreation_SendToWiFi             = xTaskCreate(task_send_to_wifi,            "Task - Send Data",                 2048, NULL, 3, &xTask_SendToWiFi);
-    taskCreation_SendToI2C              = xTaskCreate(task_send_to_i2c,             "Task - Send I2C Data",             2048, NULL, 2, &xTask_SendToI2C);
-    taskCreation_CallibrateWheelMotors  = xTaskCreate(task_callibrate_wheel_motor,  "Task - Callibrate Wheel Motors",   3072, NULL, 7, &xTask_CallibrateWheelMotor);
+    BaseType_t taskCreation_ps4Sampling             = xTaskCreate(task_ps4_sampling,            "Task - PS4 Sampling",              4096, NULL, 4, &xTask_Ps4Sampling);
+    BaseType_t taskCreation_UpdateEncoders          = xTaskCreate(task_update_encoders,         "Task - Update Encoders",           2048, NULL, 5, &xTask_UpdateEncoders);
+    BaseType_t taskCreation_ActuateMotors           = xTaskCreate(task_actuate_motors,          "Task - Actuate Motors",            4096, NULL, 6, &xTask_ActuateMotors);
+    BaseType_t taskCreation_WebsocketHandler        = xTaskCreate(task_websocket_handler,       "Task - WebSocket Handler",         3072, NULL, 2, &xTask_WebsocketHandler);
+    BaseType_t taskCreation_SendToWiFi              = xTaskCreate(task_send_to_wifi,            "Task - Send Data",                 2048, NULL, 3, &xTask_SendToWiFi);
+    BaseType_t taskCreation_SendToI2C               = xTaskCreate(task_send_to_i2c,             "Task - Send I2C Data",             2048, NULL, 2, &xTask_SendToI2C);
+    BaseType_t taskCreation_CalibrateWheelMotors    = xTaskCreate(task_calibrate_wheel_motor,   "Task - Calibrate Wheel Motors",    3072, NULL, 7, &xTask_CalibrateWheelMotor);
     // Check creation status for each task
     check_task_creation(creationStatus, taskCreation_ps4Sampling,           task1Name);
     check_task_creation(creationStatus, taskCreation_UpdateEncoders,        task2Name);
@@ -163,7 +153,7 @@ void setup(){
     check_task_creation(creationStatus, taskCreation_WebsocketHandler,      task4Name);
     check_task_creation(creationStatus, taskCreation_SendToWiFi,            task5Name);
     check_task_creation(creationStatus, taskCreation_SendToI2C,             task6Name);
-    check_task_creation(creationStatus, taskCreation_CallibrateWheelMotors, task7Name);
+    check_task_creation(creationStatus, taskCreation_CalibrateWheelMotors,  task7Name);
 
     // If any of the semaphore/mutex and queue has failed to create, exit
     if (creationStatus == 0) {
@@ -187,7 +177,7 @@ void setup(){
     print_free_stack(xTask_WebsocketHandler, task4Name);
     print_free_stack(xTask_SendToWiFi, task5Name);
     print_free_stack(xTask_SendToI2C, task6Name);
-    print_free_stack(xTask_CallibrateWheelMotor, task7Name);
+    print_free_stack(xTask_CalibrateWheelMotor, task7Name);
     Serial.printf("Free heap size: %d bytes\n", esp_get_free_heap_size());  
     Serial.printf("Minimum free heap ever: %d bytes\n", esp_get_minimum_free_heap_size()); 
     #endif
@@ -206,18 +196,31 @@ void loop() {
     vTaskDelay(pdMS_TO_TICKS(CPU_UTIL_CALCULATION_PERIOD));
 }
 
-// Task - Get input from PS4
+// Task - Get input from PS4 //
 void task_ps4_sampling(void *pvParameters) {
     const TickType_t xFrequency = pdMS_TO_TICKS(PS4_SAMPLING_PERIOD); // Set task running frequency
     TickType_t xLastWakeTime = xTaskGetTickCount();   // Initialize last wake time
     bool dataUpdated;
+    uint8_t noDataCount = 0;
     for (;;) {
         // Set task start time (to calculate for CPU Utilization)
         UtilPs4Sampling.set_start_time();
 
         // Get new PS4 data
         dataUpdated = BP32.update();
-        if (dataUpdated) processControllers();
+        if (dataUpdated) {
+            processControllers();
+            noDataCount = 0;
+        }
+        else { 
+            noDataCount++;
+            if (noDataCount == 5) {
+                ps4StickOutputs[0] = 0;
+                ps4StickOutputs[1] = 0;
+                ps4StickOutputs[2] = 0;
+                ps4StickOutputs[3] = 0;
+            }
+        }
         // Calculate motor input based on ps4 analog stick and modifies wheelMotorps4Inputs. Does not include ramp function
         ps4_input_to_wheel_velocity();
 
@@ -246,7 +249,7 @@ void task_update_encoders(void *pvParameters) {
         encoderBR = BR_Motor.update_tick_velocity();
 
         // Create and send the message to the queue
-        if (xSemaphoreTake(xMutex_wheelMotorPs4Inputs, 0)) {
+        if (xSemaphoreTake(xMutex_sendWheelEncoderToWifi, 0)) {
             if (sendWheelEncoderToWifi) {
                 xSemaphoreGive(xMutex_sendWheelEncoderToWifi);
                 sprintf(formattedMessage, "1:%d,2:%d,3:%d,4:%d\n", encoderUL, encoderUR, encoderBL, encoderBR);
@@ -360,8 +363,8 @@ void task_send_to_i2c(void *pvParameters) {
     }
 }
 
-// Task to callibrate motor wheels due to different inertia of the wheels
-void task_callibrate_wheel_motor(void *pvParemeters) {
+// Task to calibrate motor wheels due to different inertia of the wheels
+void task_calibrate_wheel_motor(void *pvParemeters) {
     // Callibration parameters
     double initialPwm = 0;
     double targetPwm = 60;

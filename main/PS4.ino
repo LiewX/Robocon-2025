@@ -7,13 +7,13 @@
 
 // Software compensation for intertia imbalance on wheels
 #define PWM_FACTOR_CORRECTION_UL 1.0
-#define PWM_FACTOR_CORRECTION_UR 1.0
-#define PWM_FACTOR_CORRECTION_BL 1.0
-#define PWM_FACTOR_CORRECTION_BR 1.0
+#define PWM_FACTOR_CORRECTION_UR 1.000459355
+#define PWM_FACTOR_CORRECTION_BL 0.9406509621
+#define PWM_FACTOR_CORRECTION_BR 1.020506243
 #define PWM_OFFSET_UL 0.0
-#define PWM_OFFSET_UR 0.0
-#define PWM_OFFSET_BL 0.0
-#define PWM_OFFSET_BR 0.0
+#define PWM_OFFSET_UR -0.07340768895
+#define PWM_OFFSET_BL 1.82371705
+#define PWM_OFFSET_BR -2.758928898
 
 // Global variable array. For each index corresponding to each button press, it specifies which ESP32 the I2C message should be sent to
 uint8_t I2cButtonSendingAddress [SLAVE_PS4_BUTTON_COUNTS] = 
@@ -350,6 +350,24 @@ void ps4_input_to_wheel_velocity () {
     motorPWM[1] = leftStickActuation*sin(leftStickAngle - 0.25*PI) - rightStickActuation; // Upper-right motor
     motorPWM[2] = leftStickActuation*sin(leftStickAngle - 0.25*PI) + rightStickActuation; // Bottom-left motor
     motorPWM[3] = leftStickActuation*sin(leftStickAngle + 0.25*PI) - rightStickActuation; // Bottom-right motor
+    
+    // Motor speed calibration (Offset values are multiplied by 2, because mapping is applied after calibrations)
+    motorPWM[0] = (motorPWM[0]*PWM_FACTOR_CORRECTION_UL);
+    motorPWM[1] = (motorPWM[1]*PWM_FACTOR_CORRECTION_UR);
+    motorPWM[2] = (motorPWM[2]*PWM_FACTOR_CORRECTION_BL);
+    motorPWM[3] = (motorPWM[3]*PWM_FACTOR_CORRECTION_BR);
+    
+    if (motorPWM[0] > 0) motorPWM[0] += PWM_OFFSET_UL*2; 
+    else motorPWM[0] -= PWM_OFFSET_UL*2;
+    
+    if (motorPWM[1] > 0) motorPWM[1] += PWM_OFFSET_UR*2;
+    else motorPWM[1] -= PWM_OFFSET_UR*2;
+    
+    if (motorPWM[2] > 0) motorPWM[2] += PWM_OFFSET_BL*2;
+    else motorPWM[2] -= PWM_OFFSET_BL*2;
+    
+    if (motorPWM[3] > 0) motorPWM[3] += PWM_OFFSET_BR*2;
+    else motorPWM[3] -= PWM_OFFSET_BR*2;
 
     // Map to 0~100 PWM value, output is not clamped and can go up to 200
     motorPWM[0] = map(motorPWM[0], -MAX_ANALOG_STICK_VALUE, MAX_ANALOG_STICK_VALUE, -100, 100); // Upper-left motor
@@ -358,32 +376,13 @@ void ps4_input_to_wheel_velocity () {
     motorPWM[3] = map(motorPWM[3], -MAX_ANALOG_STICK_VALUE, MAX_ANALOG_STICK_VALUE, -100, 100); // Bottom-right motor
     // Serial.printf("1: %.2f, 2: %.2f, 3: %.2f, 4: %.2f\n", motorPWM[0], motorPWM[1], motorPWM[2], motorPWM[3]);
 
-    // Motor speed calibration
-    motorPWM[0] = (motorPWM[0]*PWM_FACTOR_CORRECTION_UL);
-    motorPWM[1] = (motorPWM[1]*PWM_FACTOR_CORRECTION_UR);
-    motorPWM[2] = (motorPWM[2]*PWM_FACTOR_CORRECTION_BL);
-    motorPWM[3] = (motorPWM[3]*PWM_FACTOR_CORRECTION_BR);
-
-    if (motorPWM[0] < 0) motorPWM[0] -= PWM_OFFSET_UL; 
-    else motorPWM[0] += PWM_OFFSET_UL;
-
-    if (motorPWM[1] < 0) motorPWM[1] -= PWM_OFFSET_UL;   
-    else motorPWM[1] += PWM_OFFSET_UL;
-
-    if (motorPWM[2] < 0) motorPWM[2] -= PWM_OFFSET_UL;
-    else motorPWM[2] += PWM_OFFSET_UL;
-
-    if (motorPWM[3] < 0) motorPWM[3] -= PWM_OFFSET_UL;
-    else motorPWM[3] += PWM_OFFSET_UL;
-
-    // TODO Convert to function (Maybe)
     // Scale motor speeds down in case calculated motor speed is above 100
     double maxInput = max(max(abs(motorPWM[0]), abs(motorPWM[1])), max(abs(motorPWM[2]), abs(motorPWM[3])));
     if (maxInput > 100.0) {
         motorPWM[0] =  (motorPWM[0]*100)/maxInput;
         motorPWM[1] = -(motorPWM[1]*100)/maxInput; // -ve to consider cw and ccw direction
-        motorPWM[2] =  (motorPWM[2]*100)/maxInput; // -ve to consider cw and ccw direction
-        motorPWM[3] = -(motorPWM[3]*100)/maxInput;
+        motorPWM[2] = -(motorPWM[2]*100)/maxInput; // -ve to consider cw and ccw direction
+        motorPWM[3] =  (motorPWM[3]*100)/maxInput;
     }
     
     // Wait for mutex before modifying wheelMotorps4Inputs
