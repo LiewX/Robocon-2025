@@ -20,43 +20,46 @@
  * - Updated update_encoder task to print through WiFi with a variable flag protected by semaphore
  * 
  * To be tested:
- * - Pin assignment and open loop wheel motion on robot through PS4
+ * - Closed loop orientation control of robot using IMU
  * - Communication of PS4 button presses through I2C
  * - Get encoder value data
 */
 
 // Global tasks names
-const char* task1Name = "Task - PS4 Sampling";                // PS4 Sampling
-const char* task2Name = "Task - Update Encoders";             // Update Wheel Encoders
-const char* task3Name = "Task - Actuate Motors";              // Actuate Wheel Motors
-const char* task4Name = "Task - WebSocket Handler";           // WebSocket Handler
-const char* task5Name = "Task - Send WiFi Data";              // Send Data to WiFi
-const char* task6Name = "Task - Send I2C Data";               // Send Data to I2C
-const char* task7Name = "Task - Callibrate Wheel Motors";     // Calibrate Wheel Motors
-const char* task8Name = "Task - Update IMU";                  // IMU Sampling
+const char* task1Name = "Task - PS4 Sampling";                      // PS4 Sampling
+const char* task2Name = "Task - Update Encoders";                   // Update Wheel Encoders
+const char* task3Name = "Task - Actuate Motors";                    // Actuate Wheel Motors
+const char* task4Name = "Task - WebSocket Handler";                 // WebSocket Handler
+const char* task5Name = "Task - Send WiFi Data";                    // Send Data to WiFi
+const char* task6Name = "Task - Send I2C Data";                     // Send Data to I2C
+const char* task7Name = "Task - Callibrate Wheel Motors";           // Calibrate Wheel Motors
+const char* task8Name = "Task - Update IMU";                        // IMU Sampling
+const char* task9Name = "Task - Closed Loop Orientation Control";   // Closed Loop Orientation Control of Robot
 
 // Global class variable for calculating CPU Utilization for each task
-TaskCpuUtilization UtilPs4Sampling      (PS4_SAMPLING_PERIOD,           task1Name);
-TaskCpuUtilization UtilUpdateEncoders   (MOTOR_WHEEL_ENCODER_PERIOD,    task2Name);
-TaskCpuUtilization UtilActuateMotors    (MOTOR_WHEEL_ACTUATION_PERIOD,  task3Name);
-TaskCpuUtilization UtilWebSocketHandler (WEBSOCKET_HANDLING_PERIOD,     task4Name);
-TaskCpuUtilization UtilSendToWifi       (SEND_TO_WIFI_PERIOD,           task5Name);
-TaskCpuUtilization UtilSendToI2c        (SEND_TO_I2C_PERIOD,            task6Name);
-TaskCpuUtilization UtilUpdateIMU        (UPDATE_IMU_PERIOD,             task8Name);
+TaskCpuUtilization UtilPs4Sampling          (PS4_SAMPLING_PERIOD,           task1Name, xTask_Ps4Sampling);
+TaskCpuUtilization UtilUpdateEncoders       (MOTOR_WHEEL_ENCODER_PERIOD,    task2Name, xTask_UpdateEncoders);
+TaskCpuUtilization UtilActuateMotors        (MOTOR_WHEEL_ACTUATION_PERIOD,  task3Name, xTask_ActuateMotors);
+TaskCpuUtilization UtilWebSocketHandler     (WEBSOCKET_HANDLING_PERIOD,     task4Name, xTask_WebsocketHandler);
+TaskCpuUtilization UtilSendToWifi           (SEND_TO_WIFI_PERIOD,           task5Name, xTask_SendToWiFi);
+TaskCpuUtilization UtilSendToI2c            (SEND_TO_I2C_PERIOD,            task6Name, xTask_SendToI2C);
+TaskCpuUtilization UtilUpdateIMU            (UPDATE_IMU_PERIOD,             task8Name, xTask_UpdateIMU);
+TaskCpuUtilization UtilOrientationControl   (MOTOR_WHEEL_ACTUATION_PERIOD,  task9Name, xTask_OrientationControl);
 
 // Function prototypes for setup functions
 void websocket_setup();
 void ps4_setup();
 
 // Function prototypes for tasks
-void task_ps4_sampling          (void *pvParameters);
-void task_update_encoders       (void *pvParameters);
-void task_actuate_motors        (void *pvParameters);
-void task_websocket_handler     (void *pvParameters);
-void task_send_to_wifi          (void *pvParameters);
-void task_send_to_i2c           (void *pvParameters);
-void task_callibrate_wheel_motor(void *pvParameters);
-void task_update_imu         (void *pvParameters);
+void task_ps4_sampling              (void *pvParameters);
+void task_update_encoders           (void *pvParameters);
+void task_actuate_motors            (void *pvParameters);
+void task_websocket_handler         (void *pvParameters);
+void task_send_to_wifi              (void *pvParameters);
+void task_send_to_i2c               (void *pvParameters);
+void task_callibrate_wheel_motor    (void *pvParameters);
+void task_update_imu                (void *pvParameters);
+void task_orientation_control       (void *pvParameters);
 
 // Task Handles
 TaskHandle_t xTask_Ps4Sampling;
@@ -67,10 +70,12 @@ TaskHandle_t xTask_SendToWiFi;
 TaskHandle_t xTask_SendToI2C;
 TaskHandle_t xTask_CallibrateWheelMotor;
 TaskHandle_t xTask_UpdateIMU;
+TaskHandle_t xTask_OrientationControl;
 
 // Semaphore Handles
-SemaphoreHandle_t xMutex_wheelMotorPs4Inputs;
+SemaphoreHandle_t xMutex_wheelMotorPwm;
 SemaphoreHandle_t xMutex_sendWheelEncoderToWifi;
+SemaphoreHandle_t xMutex_imuYaw;
 SemaphoreHandle_t bsem_callibrateWheelMotor;
 
 // Queue Handles
@@ -115,34 +120,25 @@ void ps4_setup() {
 void setup(){
     Serial.begin(115200);
     Serial.printf("Initializing...\n");
-    // Encoder setup
-	ESP32Encoder::useInternalWeakPullResistors = puType::up;    // Enable the weak pull up resistors
 
     // Setup
     websocket_setup();  // WebSocket Server Setup
     ps4_setup();        // PS4 Controller Setup
-    mpu_setup();        // MPU6050 Setup
-    Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);  // Initialize I2C
+    Wire1.begin(I2C_SDA_PIN, I2C_SCL_PIN);  // Initialize I2C
     
-    // Task creation result variables
-    BaseType_t taskCreation_ps4Sampling;
-    BaseType_t taskCreation_UpdateEncoders;
-    BaseType_t taskCreation_ActuateMotors;
-    BaseType_t taskCreation_WebsocketHandler;
-    BaseType_t taskCreation_SendToWiFi;
-    BaseType_t taskCreation_SendToI2C;
-    BaseType_t taskCreation_CallibrateWheelMotors;
-    BaseType_t taskCreation_UpdateIMU;
+    // Creation status flag for all FreeRTOS kernel objects
+    bool creationStatus = 1; 
 
-    bool creationStatus = 1; // Creation status flag for all FreeRTOS kernel objects
     // Create Mutex (Mutual Exclusion Semaphore) for global variables and binary semaphores
     // Note: These semaphores are declared in Globals.h so that they can be accessed in any file.
-    xMutex_wheelMotorPs4Inputs = xSemaphoreCreateMutex();       // Mutex for global var ps4StickOutputs
+    xMutex_wheelMotorPwm = xSemaphoreCreateMutex();             // Mutex for global var ps4StickOutputs
     xMutex_sendWheelEncoderToWifi = xSemaphoreCreateBinary();   // Mutex for global var sendWheelEncoderToWifi
+    xMutex_imuYaw = xSemaphoreCreateBinary();                   // Mutex for global var imuYaw
     bsem_callibrateWheelMotor = xSemaphoreCreateBinary();       // Binary semaphore to indicate that wheel callibration needs to be commenced 
     // Check creation status for each semaphore/mutex
-    check_sem_creation(creationStatus, xMutex_wheelMotorPs4Inputs, "Mutex - PS4 Stick Outputs");
+    check_sem_creation(creationStatus, xMutex_wheelMotorPwm, "Mutex - PS4 Stick Outputs");
     check_sem_creation(creationStatus, xMutex_sendWheelEncoderToWifi, "Mutex - Send Wheel Encoders' Values to WiFi");
+    check_sem_creation(creationStatus, xMutex_imuYaw, "Mutex - IMU Yaw");
     check_sem_creation(creationStatus, bsem_callibrateWheelMotor, "Binary Semaphore - Placeholder");
 
     // Create queues
@@ -155,14 +151,15 @@ void setup(){
 
     // Create tasks
     // Arguments: Task function, Task name, Stack size (bytes), Parameters, Priority (higher numerical value means a more critical priority), Task handle
-    taskCreation_ps4Sampling            = xTaskCreate(task_ps4_sampling,            "Task - PS4 Sampling",              4096, NULL, 4, &xTask_Ps4Sampling);
-    taskCreation_UpdateEncoders         = xTaskCreate(task_update_encoders,         "Task - Update Encoders",           2048, NULL, 5, &xTask_UpdateEncoders);
-    taskCreation_ActuateMotors          = xTaskCreate(task_actuate_motors,          "Task - Actuate Motors",            4096, NULL, 6, &xTask_ActuateMotors);
-    taskCreation_WebsocketHandler       = xTaskCreate(task_websocket_handler,       "Task - WebSocket Handler",         3072, NULL, 2, &xTask_WebsocketHandler);
-    taskCreation_SendToWiFi             = xTaskCreate(task_send_to_wifi,            "Task - Send Data",                 2048, NULL, 3, &xTask_SendToWiFi);
-    taskCreation_SendToI2C              = xTaskCreate(task_send_to_i2c,             "Task - Send I2C Data",             2048, NULL, 2, &xTask_SendToI2C);
-    taskCreation_CallibrateWheelMotors  = xTaskCreate(task_callibrate_wheel_motor,  "Task - Callibrate Wheel Motors",   3072, NULL, 7, &xTask_CallibrateWheelMotor);
-    taskCreation_UpdateIMU           = xTaskCreate(task_update_imu,               "Task - Update IMU",               3072, NULL, 4, &xTask_UpdateIMU);        // NOTE not sure what priority level 
+    BaseType_t taskCreation_ps4Sampling             = xTaskCreate(task_ps4_sampling,            "Task - PS4 Sampling",              4096, NULL, 4, &xTask_Ps4Sampling);
+    BaseType_t taskCreation_UpdateEncoders          = xTaskCreate(task_update_encoders,         "Task - Update Encoders",           2048, NULL, 5, &xTask_UpdateEncoders);
+    BaseType_t taskCreation_ActuateMotors           = xTaskCreate(task_actuate_motors,          "Task - Actuate Motors",            4096, NULL, 6, &xTask_ActuateMotors);
+    BaseType_t taskCreation_WebsocketHandler        = xTaskCreate(task_websocket_handler,       "Task - WebSocket Handler",         3072, NULL, 2, &xTask_WebsocketHandler);
+    BaseType_t taskCreation_SendToWiFi              = xTaskCreate(task_send_to_wifi,            "Task - Send Data",                 2048, NULL, 3, &xTask_SendToWiFi);
+    BaseType_t taskCreation_SendToI2C               = xTaskCreate(task_send_to_i2c,             "Task - Send I2C Data",             2048, NULL, 2, &xTask_SendToI2C);
+    BaseType_t taskCreation_CallibrateWheelMotors   = xTaskCreate(task_callibrate_wheel_motor,  "Task - Callibrate Wheel Motors",   3072, NULL, 7, &xTask_CallibrateWheelMotor);
+    BaseType_t taskCreation_UpdateIMU               = xTaskCreate(task_update_imu,              "Task - Update IMU",                3072, NULL, 4, &xTask_UpdateIMU);
+    BaseType_t taskCreation_OrientationControl      = xTaskCreate(task_update_imu,              "Task - Orientation Control",       3072, NULL, 6, &xTask_OrientationControl); 
 
     // Check creation status for each task
     check_task_creation(creationStatus, taskCreation_ps4Sampling,           task1Name);
@@ -172,7 +169,8 @@ void setup(){
     check_task_creation(creationStatus, taskCreation_SendToWiFi,            task5Name);
     check_task_creation(creationStatus, taskCreation_SendToI2C,             task6Name);
     check_task_creation(creationStatus, taskCreation_CallibrateWheelMotors, task7Name);
-    check_task_creation(creationStatus, taskCreation_UpdateIMU,            task8Name);
+    check_task_creation(creationStatus, taskCreation_UpdateIMU,             task8Name);
+    check_task_creation(creationStatus, taskCreation_OrientationControl,    task9Name);
 
     // If any of the semaphore/mutex and queue has failed to create, exit
     if (creationStatus == 0) {
@@ -198,6 +196,7 @@ void setup(){
     print_free_stack(xTask_SendToI2C, task6Name);
     print_free_stack(xTask_CallibrateWheelMotor, task7Name);
     print_free_stack(xTask_UpdateIMU, task8Name);
+    print_free_stack(xTask_OrientationControl, task9Name);
     Serial.printf("Free heap size: %d bytes\n", esp_get_free_heap_size());  
     Serial.printf("Minimum free heap ever: %d bytes\n", esp_get_minimum_free_heap_size()); 
     #endif
@@ -213,6 +212,7 @@ void loop() {
     UtilSendToWifi.send_util_to_wifi();
     UtilSendToI2c.send_util_to_wifi();
     UtilUpdateIMU.send_util_to_wifi();
+    UtilOrientationControl.send_util_to_wifi();
     #endif
     vTaskDelay(pdMS_TO_TICKS(CPU_UTIL_CALCULATION_PERIOD));
 }
@@ -229,7 +229,7 @@ void task_ps4_sampling(void *pvParameters) {
         // Get new PS4 data
         dataUpdated = BP32.update();
         if (dataUpdated) processControllers();
-        // Calculate motor input based on ps4 analog stick and modifies wheelMotorps4Inputs. Does not include ramp function
+        // Calculate motor input based on ps4 analog stick and modifies motorWheelsPwm. Does not include ramp function
         ps4_input_to_wheel_velocity();
 
         // Set task end time (to calculate for CPU Utilization)
@@ -257,7 +257,7 @@ void task_update_encoders(void *pvParameters) {
         encoderBR = BR_Motor.update_tick_velocity();
 
         // Create and send the message to the queue
-        if (xSemaphoreTake(xMutex_wheelMotorPs4Inputs, 0)) {
+        if (xSemaphoreTake(xMutex_wheelMotorPwm, 0)) {
             if (sendWheelEncoderToWifi) {
                 xSemaphoreGive(xMutex_sendWheelEncoderToWifi);
                 sprintf(formattedMessage, "1:%d,2:%d,3:%d,4:%d\n", encoderUL, encoderUR, encoderBL, encoderBR);
@@ -354,9 +354,9 @@ void task_send_to_i2c(void *pvParameters) {
 
         // Wait until there is data in the I2C queue
         if (xQueueReceive(xQueue_i2c, &packet, portMAX_DELAY) == pdPASS) {
-            Wire.beginTransmission(packet.slaveAddress);    // Set to send to specified slave
-            Wire.write( (uint8_t*) packet.message, strlen(packet.message) );    // Send data
-            if (Wire.endTransmission() == 0) {
+            Wire1.beginTransmission(packet.slaveAddress);    // Set to send to specified slave
+            Wire1.write( (uint8_t*) packet.message, strlen(packet.message) );    // Send data
+            if (Wire1.endTransmission() == 0) {
                 Serial.printf("Data sent successfully to slave.\n");
             } 
             else {
@@ -415,7 +415,7 @@ void task_callibrate_wheel_motor(void *pvParemeters) {
         // Ramp down
         if (currentIter < rampDownMaxIter) {
             currentPWM -= downPwmIncrement;
-            UL_Motor.set_motor_PWM(currentPWM); //U Top 1
+            UL_Motor.set_motor_PWM(currentPWM); // U Top 1
             UR_Motor.set_motor_PWM(currentPWM); // U Top 2
             BL_Motor.set_motor_PWM(currentPWM); // B Top 1
             BR_Motor.set_motor_PWM(currentPWM); // B Top 2
@@ -431,32 +431,63 @@ void task_callibrate_wheel_motor(void *pvParemeters) {
     }
 }
 
-// this one only collects the data
+// Task to update IMU for closed loop orientation control
 void task_update_imu(void *pvParameters) {
     const TickType_t xFrequency = pdMS_TO_TICKS(UPDATE_IMU_PERIOD); // Set task running frequency
     TickType_t xLastWakeTime = xTaskGetTickCount();   // Initialize last wake time
     for (;;) {
-
         // Set task start time (to calculate for CPU Utilization)
         UtilUpdateIMU.set_start_time();
 
-        IMUData imuData; 
-        read_raw_gyro_data(); 
-        calculate_orientation();  // Update global yaw, pitch, and roll
-
-        // Store IMU readings into struct
-        imuData.yaw = current_yaw; 
-        imuData.pitch = current_pitch; 
-        imuData.roll = current_roll; 
-
-        // send IMU Data to the I2C queue
-
-
+        IMU.read_raw_gyro_data(); 
+        IMU.calculate_orientation();  // Update global yaw, pitch, and roll
 
         // Set task end time (to calculate for CPU Utilization)
         UtilUpdateIMU.set_end_time();
         // Delay until the next execution time
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
+}
 
+// Task to perform closed loop orientation control of the robot using gyroscope
+void task_motor_orientation_control(void *pvParameters) {
+    const TickType_t xFrequency = pdMS_TO_TICKS(MOTOR_WHEEL_ACTUATION_PERIOD); // Set task running frequency
+    TickType_t xLastWakeTime = xTaskGetTickCount();   // Initialize last wake time
+    PID_Controller orientationPID(1, 0, 0, MOTOR_WHEEL_ACTUATION_PERIOD, -100, 100); 
+
+    for (;;) {
+        // When task is first created or when process variable has reached setpoint, suspend itself
+        vTaskSuspend(NULL);
+        for(;;) {
+            // Set task start time (to calculate for CPU Utilization)
+            UtilOrientationControl.set_start_time();
+
+            // If not within tolerance of target, use PID to actuate motor
+            if (!orientationPID.is_within_tolerance(5)) {
+                // Get yaw angle
+                double yaw = IMU.get_gyro_yaw();
+                // Use PID
+                double output = orientationPID.compute(yaw);
+                // Convert output to pwm on each wheel
+                update_wheel_pwm(0, 0, output);
+                // Actuate motor
+                actuate_motor_wheels();
+            } else { // If within tolerance of target, stop motor and signal state machine
+                // Stop motors
+                UL_Motor.stop_motor();
+                UR_Motor.stop_motor();
+                BL_Motor.stop_motor();
+                BR_Motor.stop_motor();
+                // Todo: Signal to state machine
+                // Set task end time (to calculate for CPU Utilization)
+                UtilOrientationControl.set_end_time();
+                break;
+            }
+
+            // Set task end time (to calculate for CPU Utilization)
+            UtilOrientationControl.set_end_time();
+            // Delay until the next execution time
+            vTaskDelayUntil(&xLastWakeTime, xFrequency);
+        }
+    }
 }

@@ -3,10 +3,6 @@
 #include <ESP32Encoder.h> //https://github.com/madhephaestus/ESP32Encoder
 #include "PID.h"
 
-#define PWM_RES 12
-#define PWM_MAX_BIT ((1 << PWM_RES) - 1)    // equivalent to 2^PWM_RES - 1
-#define PWM_FREQ 10000              // test 1-20kHz range
-
 class Motor {
 private:
     uint8_t motorDirPin;
@@ -52,4 +48,5 @@ uint8_t Motor::pwmChannelsUsed = 0;  // Static member initialization
 void forward_hard_coded_with_encoder(double initialPWM, double maxPWM, double rampUpTimeMs, double maxSpeedTime, double rampDownTimeMs, MotorWithEncoder (&wheelMotors)[4]);
 void forward_hard_coded(double initialPWM, double maxPWM, double rampTime, double duration, Motor wheelMotors[4]);
 void actuate_motor_wheels();
+void update_wheel_pwm(double translationEffort, double translationAngle, double rotationEffort);
 // void input_shaping(double (&wheelMotorInputs) [4], double (&previousWheelMotorInputs) [4], double maxPwmIncrement);

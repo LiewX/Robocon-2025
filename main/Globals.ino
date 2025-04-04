@@ -1,9 +1,11 @@
 #pragma once
 #include <Arduino.h>
+#include "Globals.h"
 #include "PinAssignment.h"
 #include "Motor.h"
 #include <Bluepad32.h>
 #include <ArduinoWebsockets.h>
+#include "IMU.h"
 
 /*========================================================================================
 =                            WHEEL MOTOR GLOBAL VARIABLES                                =
@@ -67,7 +69,7 @@ MotorWithEncoder BR_Motor(
 // An array of wheel motor of class MotorWithEncoder
 MotorWithEncoder wheelMotors [4] = {UL_Motor, UR_Motor, BL_Motor, BR_Motor};
 // Inputs for all 4 wheel motors computed from PD velocity controller.
-double wheelMotorPs4Inputs [4] = {0, 0, 0, 0};          // Raw velocity calculated from PS4 analog stick
+double motorWheelsPwm [4] = {0, 0, 0, 0};          // PWM input calculated to actuate motor
 
 // Flag to send wheel encoder values to WiFi
 bool sendWheelEncoderToWifi = 0;
@@ -78,7 +80,10 @@ bool sendWheelEncoderToWifi = 0;
 int ps4StickOutputs [4] = {0, 0, 0, 0};
 ControllerPtr myControllers[BP32_MAX_GAMEPADS];
 
-
+/*========================================================================================
+=                                IMU GLOBAL VARIABLE                                     =
+========================================================================================*/
+IMU_Class IMU();
 
 /*========================================================================================
 =                      WiFi DATA TRANSMISSION GLOBAL VARIABLES                           =
