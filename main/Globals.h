@@ -21,14 +21,14 @@
 #define PWM_FREQ 10000                      // test 1-20kHz range
 
 // Software compensation for intertia imbalance on wheels
-#define WHEEL_PWM_FACTOR_CORRECTION_UL 1.0
-#define WHEEL_PWM_FACTOR_CORRECTION_UR 1.000459355
-#define WHEEL_PWM_FACTOR_CORRECTION_BL 0.9406509621
-#define WHEEL_PWM_FACTOR_CORRECTION_BR 1.020506243
-#define WHEEL_PWM_OFFSET_UL 0.0
-#define WHEEL_PWM_OFFSET_UR -0.07340768895
-#define WHEEL_PWM_OFFSET_BL 1.82371705
-#define WHEEL_PWM_OFFSET_BR -2.758928898
+#define PWM_FACTOR_CORRECTION_UL 1.0
+#define PWM_FACTOR_CORRECTION_UR 1.000459355
+#define PWM_FACTOR_CORRECTION_BL 0.9406509621
+#define PWM_FACTOR_CORRECTION_BR 1.020506243
+#define PWM_OFFSET_UL  0.0
+#define PWM_OFFSET_UR -0.07340768895
+#define PWM_OFFSET_BL  1.82371705
+#define PWM_OFFSET_BR -2.758928898
 
 
 /*========================================================================================

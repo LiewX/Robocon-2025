@@ -170,6 +170,24 @@ void update_wheel_pwm(double translationEffort, double translationAngle, double 
     motorPWM[2] = translationEffort*sin(translationAngle - 0.25*PI) + translationAngle; // Bottom-left motor
     motorPWM[3] = translationEffort*sin(translationAngle + 0.25*PI) - translationAngle; // Bottom-right motor
 
+    // Motor speed calibration (Offset values are multiplied by 2, because mapping is applied after calibrations)
+    motorPWM[0] = (motorPWM[0]*PWM_FACTOR_CORRECTION_UL);
+    motorPWM[1] = (motorPWM[1]*PWM_FACTOR_CORRECTION_UR);
+    motorPWM[2] = (motorPWM[2]*PWM_FACTOR_CORRECTION_BL);
+    motorPWM[3] = (motorPWM[3]*PWM_FACTOR_CORRECTION_BR);
+    
+    if (motorPWM[0] > 0) motorPWM[0] += PWM_OFFSET_UL*2; 
+    else motorPWM[0] -= PWM_OFFSET_UL*2;
+    
+    if (motorPWM[1] > 0) motorPWM[1] += PWM_OFFSET_UR*2;
+    else motorPWM[1] -= PWM_OFFSET_UR*2;
+    
+    if (motorPWM[2] > 0) motorPWM[2] += PWM_OFFSET_BL*2;
+    else motorPWM[2] -= PWM_OFFSET_BL*2;
+    
+    if (motorPWM[3] > 0) motorPWM[3] += PWM_OFFSET_BR*2;
+    else motorPWM[3] -= PWM_OFFSET_BR*2;
+
     // Map to 0~100 PWM value, output is not clamped and can go up to 200
     motorPWM[0] = map(motorPWM[0], -MAX_ANALOG_STICK_VALUE, MAX_ANALOG_STICK_VALUE, -100, 100); // Upper-left motor
     motorPWM[1] = map(motorPWM[1], -MAX_ANALOG_STICK_VALUE, MAX_ANALOG_STICK_VALUE, -100, 100); // Upper-right motor
@@ -177,31 +195,13 @@ void update_wheel_pwm(double translationEffort, double translationAngle, double 
     motorPWM[3] = map(motorPWM[3], -MAX_ANALOG_STICK_VALUE, MAX_ANALOG_STICK_VALUE, -100, 100); // Bottom-right motor
     // Serial.printf("1: %.2f, 2: %.2f, 3: %.2f, 4: %.2f\n", motorPWM[0], motorPWM[1], motorPWM[2], motorPWM[3]);
 
-    // Motor speed calibration
-    motorPWM[0] = (motorPWM[0]*WHEEL_PWM_FACTOR_CORRECTION_UL);
-    motorPWM[1] = (motorPWM[1]*WHEEL_PWM_FACTOR_CORRECTION_UR);
-    motorPWM[2] = (motorPWM[2]*WHEEL_PWM_FACTOR_CORRECTION_BL);
-    motorPWM[3] = (motorPWM[3]*WHEEL_PWM_FACTOR_CORRECTION_BR);
-
-    if (motorPWM[0] < 0) motorPWM[0] -= WHEEL_PWM_OFFSET_UL; 
-    else motorPWM[0] += WHEEL_PWM_OFFSET_UL;
-
-    if (motorPWM[1] < 0) motorPWM[1] -= WHEEL_PWM_OFFSET_UL;   
-    else motorPWM[1] += WHEEL_PWM_OFFSET_UL;
-
-    if (motorPWM[2] < 0) motorPWM[2] -= WHEEL_PWM_OFFSET_UL;
-    else motorPWM[2] += WHEEL_PWM_OFFSET_UL;
-
-    if (motorPWM[3] < 0) motorPWM[3] -= WHEEL_PWM_OFFSET_UL;
-    else motorPWM[3] += WHEEL_PWM_OFFSET_UL;
-
-    // In case calculated motor speed is above 100, scale motor speeds down so that the maximum is 100
+    // Scale motor speeds down in case calculated motor speed is above 100
     double maxInput = max(max(abs(motorPWM[0]), abs(motorPWM[1])), max(abs(motorPWM[2]), abs(motorPWM[3])));
     if (maxInput > 100.0) {
         motorPWM[0] =  (motorPWM[0]*100)/maxInput;
         motorPWM[1] = -(motorPWM[1]*100)/maxInput; // -ve to consider cw and ccw direction
-        motorPWM[2] =  (motorPWM[2]*100)/maxInput; // -ve to consider cw and ccw direction
-        motorPWM[3] = -(motorPWM[3]*100)/maxInput;
+        motorPWM[2] = -(motorPWM[2]*100)/maxInput; // -ve to consider cw and ccw direction
+        motorPWM[3] =  (motorPWM[3]*100)/maxInput;
     }
     
     // Wait for mutex before modifying motorWheelsPwm

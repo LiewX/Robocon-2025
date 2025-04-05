@@ -8,3 +8,4 @@
 #define PRINT_CPU_UTILIZATION               1
 // Serial
 #define PRINT_FREE_STACK_ON_EACH_TASKS      1
+#define OUTPUT_MPU6050_READINGS             1

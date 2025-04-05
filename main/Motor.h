@@ -50,4 +50,3 @@ void forward_hard_coded(double initialPWM, double maxPWM, double rampTime, doubl
 double increment_by_limit(double value, double unclampedIncrement, double maxIncrement);
 inline void actuate_motor_wheels();
 void update_wheel_pwm(double translationEffort, double translationAngle, double rotationEffort);
-// void input_shaping(double (&wheelMotorInputs) [4], double (&previousWheelMotorInputs) [4], double maxPwmIncrement);

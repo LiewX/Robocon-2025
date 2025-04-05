@@ -35,7 +35,7 @@ IMU_Class::IMU_Class()
     this->mpu.setZGyroOffset(0);  //Set your gyro offset for axis Z
 
     /*Print the defined offsets*/
-    #ifdef OUTPUT_MPU6050_READINGS
+    #if OUTPUT_MPU6050_READINGS
         Serial.print("\t");
         Serial.print(this->mpu.getXAccelOffset());
         Serial.print("\t");
@@ -67,7 +67,7 @@ void IMU_Class::read_raw_gyro_data() {
     this->GyroY = (double) gy * GYRO_SCALE_RECIPROCAL;
     this->GyroZ = (double) gz * GYRO_SCALE_RECIPROCAL;
 
-    #ifdef OUTPUT_MPU6050_READINGS
+    #if OUTPUT_MPU6050_READINGS
         Serial.print("a/g:\t");
         Serial.print(this->AccX); Serial.print("\t");
         Serial.print(this->AccY); Serial.print("\t");
@@ -86,7 +86,7 @@ void IMU_Class::calculate_roll_pitch() {
     this->acc_pitch = (atan2(-1 * AccX, sqrt(AccY*AccY + AccZ*AccZ)) * 180 / PI);
 
     // Print values
-    #ifdef OUTPUT_MPU6050_READINGS
+    #if OUTPUT_MPU6050_READINGS
         Serial.printf("Acc Pitch: %.3f° Acc Roll: %.3f°\n", acc_pitch, acc_roll);
     #endif
 }
@@ -109,7 +109,7 @@ void IMU_Class::calculate_roll_pitch() {
 //     this->current_roll = alpha * (current_roll + GyroX * dt) + (1 - alpha) * acc_roll;
 //     this->current_pitch = alpha * (current_pitch + GyroY * dt) + (1 - alpha) * acc_pitch;
 
-//     #ifdef OUTPUT_MPU6050_READINGS
+//     #if OUTPUT_MPU6050_READINGS
 //         Serial.print("Yaw: "); Serial.print(current_yaw); Serial.print("°  ");
 //         Serial.print("Pitch: "); Serial.print(current_pitch); Serial.print("°  ");
 //         Serial.print("Roll: "); Serial.print(current_roll); Serial.println("°");
@@ -135,7 +135,7 @@ void IMU_Class::calculate_orientation() {
     // this->current_roll = alpha * (current_roll + GyroX * dt) + (1 - alpha) * acc_roll;
     // this->current_pitch = alpha * (current_pitch + GyroY * dt) + (1 - alpha) * acc_pitch;
 
-    // #ifdef OUTPUT_MPU6050_READINGS
+    // #if OUTPUT_MPU6050_READINGS
     //     Serial.print("Yaw: "); Serial.print(current_yaw); Serial.print("°  ");
     //     Serial.print("Pitch: "); Serial.print(current_pitch); Serial.print("°  ");
     //     Serial.print("Roll: "); Serial.print(current_roll); Serial.println("°");

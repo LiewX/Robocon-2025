@@ -11,20 +11,6 @@
 #include "CpuUtilization.h"
 #include "IMU.h"
 
-/* 
- * To be implemented:
- * 
- * 
- * Last changed:
- * - In the input shaping function for the wheel motor actuation, used another constant to allow for a bigger decrease in input so that the robot to stop faster.
- * - If PS4 disconnects, deactivate motor wheels
- * 
- * To be tested:
- * - Closed loop orientation control of robot using IMU
- * - Communication of PS4 button presses through I2C
- * - Testing new task "Task - Calibrate Wheel Motors"
-*/
-
 // Global tasks names
 const char* task1Name = "Task - PS4 Sampling";                      // PS4 Sampling
 const char* task2Name = "Task - Update Encoders";                   // Update Wheel Encoders
@@ -32,7 +18,7 @@ const char* task3Name = "Task - Actuate Motors";                    // Actuate W
 const char* task4Name = "Task - WebSocket Handler";                 // WebSocket Handler
 const char* task5Name = "Task - Send WiFi Data";                    // Send Data to WiFi
 const char* task6Name = "Task - Send I2C Data";                     // Send Data to I2C
-const char* task7Name = "Task - Calibrate Wheel Motors";           // Calibrate Wheel Motors
+const char* task7Name = "Task - Calibrate Wheel Motors";            // Calibrate Wheel Motors
 const char* task8Name = "Task - Update IMU";                        // IMU Sampling
 const char* task9Name = "Task - Closed Loop Orientation Control";   // Closed Loop Orientation Control of Robot
 
@@ -57,9 +43,9 @@ void task_actuate_motors            (void *pvParameters);
 void task_websocket_handler         (void *pvParameters);
 void task_send_to_wifi              (void *pvParameters);
 void task_send_to_i2c               (void *pvParameters);
-void task_calibrate_wheel_motor    (void *pvParameters);
+void task_calibrate_wheel_motor     (void *pvParameters);
 void task_update_imu                (void *pvParameters);
-void task_orientation_control        (void *pvParameters);
+void task_orientation_control       (void *pvParameters);
 
 // Task Handles
 TaskHandle_t xTask_Ps4Sampling;

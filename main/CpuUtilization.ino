@@ -15,7 +15,7 @@ TaskCpuUtilization::TaskCpuUtilization(uint32_t taskPeriod, const char* taskToMo
         // Check semaphore creation status
         if (xSemaphore_ExecutedTask == NULL)
             Serial.printf("Failed to create semaphore for CPU Utilization for '%s'", taskToMonitor);
-            //stop_program(); // Will hang esp32 and not print any error messages.
+            //stop_program(); // DO NOT USE THIS. Will hang esp32 and not print any error messages.
     }
 
 inline void TaskCpuUtilization::set_start_time() {

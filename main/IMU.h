@@ -3,7 +3,6 @@
 #include <MPU6050.h> 
 
 // REGISTER/I2C ADDRESSES -- based off the MPU6050 REGISTER MAP & DESCRIPTIONS DOC
-#define OUTPUT_MPU6050_READINGS             // comment this to disable Serial outputs  
 #define ACCEL_FS_RANGE 2                    // +- 2g sensitivity 
 #define GYRO_FS_RANGE 250                   // 250 degree/sec 
 #define ACCEL_SCALE 16384               // in LSB/g, for accelerometer 2g FS # Section 4.17
@@ -20,8 +19,8 @@ class IMU_Class{
         double GyroX, GyroY, GyroZ;  // normalised
         double angle_roll, angle_pitch, angle_yaw; // roll - x, pitch - y, yaw - z  
         double aErrorX, aErrorY, gErrorX, gErrorY, gErrorZ;
-        double acc_roll, acc_pitch; 
-        double current_roll, current_pitch, current_yaw; 
+        double acc_roll, acc_pitch;
+        double current_roll, current_pitch, current_yaw;
         const double alpha = 0.98; // Complementary filter constant..? 
 
     public: 
