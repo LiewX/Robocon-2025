@@ -81,6 +81,9 @@ bool sendWheelEncoderToWifi = 0;
 /*========================================================================================
 =                                PS4 GLOBAL VARIABLES                                    =
 ========================================================================================*/
+// I2C Class
+Ps4ToI2cBridge I2C_ESP2(ESP2_I2C_SLAVE_ADDRESS);
+Ps4ToI2cBridge I2C_ESP3(ESP3_I2C_SLAVE_ADDRESS);
 
 // PS4 Stick outputs
 int ps4StickOutputs [4] = {0, 0, 0, 0};

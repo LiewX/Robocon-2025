@@ -8,8 +8,8 @@
 #include "IMU.h"
 
 // I2C Definitions
-#define SLAVE_ADDR_ESP1 0x10
-#define SLAVE_ADDR_ESP2 0x20
+#define ESP2_I2C_SLAVE_ADDRESS 0x10
+#define ESP3_I2C_SLAVE_ADDRESS 0x20
 
 // PS4 Definitions
 #define MAX_ANALOG_STICK_VALUE 512
@@ -55,6 +55,10 @@ extern IMU_Class IMU;
 /*========================================================================================
 =                                PS4 GLOBAL VARIABLES                                    =
 ========================================================================================*/
+// I2C Class
+extern Ps4ToI2cBridge I2C_ESP2;
+extern Ps4ToI2cBridge I2C_ESP3;
+
 extern int ps4StickOutputs [4];
 extern ControllerPtr myControllers[BP32_MAX_GAMEPADS];
 
@@ -76,16 +80,19 @@ extern bool clientConnected;    // Track client connection status
 // Define a struct for the I2C data packet with const char* for data
 struct I2cDataPacket {
     uint8_t slaveAddress;
-    char message[BUFFER_SIZE];
+    uint8_t message;
 };
 
 /*========================================================================================
 =                                         RTOS                                           =
 ========================================================================================*/
 // Semaphores (Note: Initialize these semaphores in main.ino )
-extern SemaphoreHandle_t xMutex_wheelMotorPwm;              // Mutex (Mutual Exclusion Semaphore) for ps4StickOutputs global var
+extern SemaphoreHandle_t xMutex_motorWheelsPwm;              // Mutex (Mutual Exclusion Semaphore) for ps4StickOutputs global var
 extern SemaphoreHandle_t xMutex_sendWheelEncoderToWifi; // Mutex for global var sendWheelEncoderToWifi
 extern SemaphoreHandle_t xMutex_imuYaw;                 // Mutex for accessing yaw_angle in IMU instance
+extern SemaphoreHandle_t xMutex_I2C_ESP2;               // Mutex for accessing I2C Class for ESP2
+extern SemaphoreHandle_t xMutex_I2C_ESP3;               // Mutex for accessing I2C Class for ESP3
+extern SemaphoreHandle_t xMutex_I2C_ESP4;               // Mutex for accessing I2C Class for ESP4
 extern SemaphoreHandle_t bsem_callibrateWheelMotor;     // Binary semaphore to indicate that new data is acquired in ps4StickOutputs global var
 // Queue Handles
 extern QueueHandle_t xQueue_wifi;

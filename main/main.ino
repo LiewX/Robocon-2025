@@ -59,9 +59,12 @@ TaskHandle_t xTask_UpdateIMU;
 TaskHandle_t xTask_OrientationControl;
 
 // Semaphore Handles
-SemaphoreHandle_t xMutex_wheelMotorPwm;
+SemaphoreHandle_t xMutex_motorWheelsPwm;
 SemaphoreHandle_t xMutex_sendWheelEncoderToWifi;
 SemaphoreHandle_t xMutex_imuYaw;
+SemaphoreHandle_t xMutex_I2C_ESP2;
+SemaphoreHandle_t xMutex_I2C_ESP3;
+SemaphoreHandle_t xMutex_I2C_ESP4;
 SemaphoreHandle_t bsem_calibrateWheelMotor;
 
 // Queue Handles
@@ -115,16 +118,22 @@ void setup(){
     // Creation status flag for all FreeRTOS kernel objects
     bool creationStatus = 1; 
 
-    // Create Mutex (Mutual Exclusion Semaphore) for global variables and binary semaphores
+    // Create Mutex (Mutual Exclusion Semaphore) for global variables and binary semaphores for task signaling
     // Note: These semaphores are declared in Globals.h so that they can be accessed in any file.
-    xMutex_wheelMotorPwm = xSemaphoreCreateMutex();             // Mutex for global var ps4StickOutputs
-    xMutex_sendWheelEncoderToWifi = xSemaphoreCreateBinary();   // Mutex for global var sendWheelEncoderToWifi
-    xMutex_imuYaw = xSemaphoreCreateBinary();                   // Mutex for global var imuYaw
+    xMutex_motorWheelsPwm = xSemaphoreCreateMutex();            // Mutex for global var motorWheelsPwm
+    xMutex_sendWheelEncoderToWifi = xSemaphoreCreateMutex();    // Mutex for global var sendWheelEncoderToWifi
+    xMutex_imuYaw = xSemaphoreCreateMutex();                    // Mutex for global var imuYaw
+    xMutex_I2C_ESP2 = xSemaphoreCreateMutex();                  // Mutex for accessing I2C Class for ESP2
+    xMutex_I2C_ESP3 = xSemaphoreCreateMutex();                  // Mutex for accessing I2C Class for ESP3
+    xMutex_I2C_ESP4 = xSemaphoreCreateMutex();                  // Mutex for accessing I2C Class for ESP4
     bsem_calibrateWheelMotor = xSemaphoreCreateBinary();        // Binary semaphore to indicate that wheel callibration needs to be commenced 
     // Check creation status for each semaphore/mutex
-    check_sem_creation(creationStatus, xMutex_wheelMotorPwm, "Mutex - PS4 Stick Outputs");
+    check_sem_creation(creationStatus, xMutex_motorWheelsPwm, "Mutex - PS4 Stick Outputs");
     check_sem_creation(creationStatus, xMutex_sendWheelEncoderToWifi, "Mutex - Send Wheel Encoders' Values to WiFi");
     check_sem_creation(creationStatus, xMutex_imuYaw, "Mutex - IMU Yaw");
+    check_sem_creation(creationStatus, xMutex_I2C_ESP2, "Mutex - ESP2 I2C Class");
+    check_sem_creation(creationStatus, xMutex_I2C_ESP3, "Mutex - ESP3 I2C Class");
+    check_sem_creation(creationStatus, xMutex_I2C_ESP4, "Mutex - ESP4 I2C Class");
     check_sem_creation(creationStatus, bsem_calibrateWheelMotor, "Binary Semaphore - Placeholder");
 
     // Create queues
@@ -353,12 +362,11 @@ void task_send_to_i2c(void *pvParameters) {
 
         // Wait until there is data in the I2C queue
         if (xQueueReceive(xQueue_i2c, &packet, portMAX_DELAY) == pdPASS) {
-            Wire1.beginTransmission(packet.slaveAddress);    // Set to send to specified slave
-            Wire1.write( (uint8_t*) packet.message, strlen(packet.message) );    // Send data
+            Wire1.beginTransmission(packet.slaveAddress);
+            Wire1.write(packet.message);  // Send the single byte
             if (Wire1.endTransmission() == 0) {
                 Serial.printf("Data sent successfully to slave.\n");
-            } 
-            else {
+            } else {
                 Serial.printf("Failed to send data.\n");
             }
         }

@@ -107,12 +107,12 @@ void actuate_motor_wheels() {
     double shapedInputs[4] = {0, 0, 0, 0};
 
     // Wait for mutex before getting value from ps4StickInputs
-    if (xSemaphoreTake(xMutex_wheelMotorPwm, portMAX_DELAY)) {
+    if (xSemaphoreTake(xMutex_motorWheelsPwm, portMAX_DELAY)) {
         // Apply input shaping (ramp function) to raw duty cycle inputs derived from PS4 inputs
         for (int i = 0; i < 4; ++i) {
             shapedInputs[i] = wheelMotors[i].input_shape_ramp(motorWheelsPwm[i]);
         }
-        xSemaphoreGive(xMutex_wheelMotorPwm);  // Release the mutex after using the variable
+        xSemaphoreGive(xMutex_motorWheelsPwm);  // Release the mutex after using the variable
     }
     
     // Apply PD to get closed loop input to motor
@@ -205,11 +205,11 @@ void update_wheel_pwm(double translationEffort, double translationAngle, double 
     }
     
     // Wait for mutex before modifying motorWheelsPwm
-    if (xSemaphoreTake(xMutex_wheelMotorPwm, portMAX_DELAY)) {
+    if (xSemaphoreTake(xMutex_motorWheelsPwm, portMAX_DELAY)) {
         motorWheelsPwm[0] = motorPWM[0];
         motorWheelsPwm[1] = motorPWM[1];
         motorWheelsPwm[2] = motorPWM[2];
         motorWheelsPwm[3] = motorPWM[3];
-        xSemaphoreGive(xMutex_wheelMotorPwm);  // Release the mutex after modifying the variable
+        xSemaphoreGive(xMutex_motorWheelsPwm);  // Release the mutex after modifying the variable
     }
 }
