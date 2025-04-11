@@ -27,7 +27,7 @@
 #define FLYWHEEL_PWM_MAX_BIT ((1 << FLYWHEEL_PWM_RES) - 1)
 #define POT_PIN 25
 #define I2C_SLAVE_ADDR 0x08
-#define RPI_SIGNAL_PIN 13  // Pin to signal RPi for angle calculation
+#define RPi_address 0x01
 #define SHOOTING_STATUS_PIN 12 // Pin to indicate shooting status (HIGH = shooting)
 
 Encoder flywheelEncoder(FLYWHEEL_ENCODER_PIN, 6, 100, 2300UL, 7000UL); 
@@ -56,7 +56,7 @@ TaskHandle_t xTask_ActuateHoodMotor;
 
 // Queue Handles
 QueueHandle_t xQueue_i2c;
-
+QueueHandle_t xQueue_angle;
 uint8_t flywheelPwmChannel;
 
 void setup() {
@@ -113,13 +113,21 @@ void setup() {
     // Other initialization if needed, e.g., I2C setup
     Wire.begin(I2C_SLAVE_ADDR);
     Wire.onReceive(onReceiveI2C); // Register the callback
+    Wire.onRequest(sendToRPi); // Register the callback
 
 }
-`
+
 void loop() {
     vTaskDelay(10000);
 }
 
+void writeToRPi(uint8_t RPi_address, uint8_t task) {
+  Wire.beginTransmission(deviceAddress);
+  Wire.write(task);
+  Wire.endTransmission();
+}
+
+// TODO: create a new task for RPi
 void onReceiveI2C(int byteCount) {
   if (byteCount > 0) {
     String request = "";
@@ -130,10 +138,9 @@ void onReceiveI2C(int byteCount) {
 
     if (request == "request angle") {
       Serial.println("Received angle request. Signaling RPi.");
-      digitalWrite(RPI_SIGNAL_PIN, HIGH); // Signal RPi
+      writeToRPi(RPi_address, request); // Signal RPi
       vTaskDelay(pdMS_TO_TICKS(10));  // Short delay for signal
-      digitalWrite(RPI_SIGNAL_PIN, LOW);
-
+     
       // Wait for angle from RPi (simulated here, replace with actual RPi communication)
       //  -->  Needs implementation for serial communication with RPi <--
       float receivedAngle; 
