@@ -5,14 +5,16 @@ import math
 import time
 
 # Load the model
-yolo = YOLO("best35epoch.pt","segment")
+# yolo = YOLO("best35epoch.pt","segment")
+YOLO_MODEL_PATH = "./weights/best.pt"
+yolo = YOLO(YOLO_MODEL_PATH, "segment")
 
 """
 NOTE: Press Q to quit the program and press P to pause the program
 
 """
 # Load the video capture
-videoCap = cv2.VideoCapture("testvid4.mp4")
+videoCap = cv2.VideoCapture("./train_files/videos/testvid4.mp4")
 
 # Known dimensions of the backboard
 KNOWN_WIDTH = 1.83  # in meters

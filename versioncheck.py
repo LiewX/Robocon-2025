@@ -1,2 +1,2 @@
-import torch;
+import torch
 torch.__version__
