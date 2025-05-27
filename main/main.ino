@@ -461,7 +461,7 @@ void task_orientation_control(void *pvParameters) {
 
     for (;;) {
         // When task is first created or when process variable has reached setpoint, suspend itself
-        // vTaskSuspend(NULL);
+        vTaskSuspend(NULL);
         digitalWrite(LED_PIN, HIGH);
         orientationPID.setSetpoint(100); // Todo: change this to a dynamic value
         Serial.println("Starting orientation control.");
