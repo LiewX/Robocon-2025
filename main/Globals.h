@@ -6,10 +6,12 @@
 #include <ArduinoWebsockets.h>
 #include "RuntimePrints.h"
 #include "IMU.h"
+#include "PS4.h"
 
 // I2C Definitions
-#define ESP2_I2C_SLAVE_ADDRESS 0x10
-#define ESP3_I2C_SLAVE_ADDRESS 0x20
+#define ESP2_I2C_SLAVE_ADDRESS 0x20
+#define ESP3_I2C_SLAVE_ADDRESS 0x30
+#define ESP4_I2C_SLAVE_ADDRESS 0x40
 
 // PS4 Definitions
 #define MAX_ANALOG_STICK_VALUE 512
@@ -58,6 +60,7 @@ extern IMU_Class IMU;
 // I2C Class
 extern Ps4ToI2cBridge I2C_ESP2;
 extern Ps4ToI2cBridge I2C_ESP3;
+extern Ps4ToI2cBridge I2C_ESP4;
 
 extern int ps4StickOutputs [4];
 extern ControllerPtr myControllers[BP32_MAX_GAMEPADS];
@@ -81,11 +84,24 @@ extern bool clientConnected;    // Track client connection status
 struct I2cDataPacket {
     uint8_t slaveAddress;
     uint8_t message;
+    uint8_t lastMessage;
 };
 
 /*========================================================================================
 =                                         RTOS                                           =
 ========================================================================================*/
+// Task Handles
+extern TaskHandle_t xTask_Ps4Sampling;
+extern TaskHandle_t xTask_UpdateEncoders;
+extern TaskHandle_t xTask_ActuateMotors;
+extern TaskHandle_t xTask_WebsocketHandler;
+extern TaskHandle_t xTask_SendToWiFi;
+extern TaskHandle_t xTask_SendToI2C;
+extern TaskHandle_t xTask_CalibrateWheelMotor;
+extern TaskHandle_t xTask_UpdateIMU;
+extern TaskHandle_t xTask_OrientationControl;
+extern TaskHandle_t xTask_SendButtonStatesThroughI2c;
+
 // Semaphores (Note: Initialize these semaphores in main.ino )
 extern SemaphoreHandle_t xMutex_motorWheelsPwm;              // Mutex (Mutual Exclusion Semaphore) for ps4StickOutputs global var
 extern SemaphoreHandle_t xMutex_sendWheelEncoderToWifi; // Mutex for global var sendWheelEncoderToWifi

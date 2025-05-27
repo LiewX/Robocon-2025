@@ -2,7 +2,7 @@ from websocket import create_connection
 import time
 
 # Replace with your ESP32's IP and port
-esp32_ip = "192.168.43.223:81"
+esp32_ip = "192.168.43.62:81"
 
 # Set the timeout duration in seconds
 timeout_duration = 15

@@ -126,7 +126,7 @@ void IMU_Class::calculate_orientation() {
 
     if (xSemaphoreTake(xMutex_imuYaw, portMAX_DELAY)) {
         this->current_yaw += gyro_yaw_rate * dt;    // Integrate over time
-        xSemaphoreGive(xMutex_motorWheelsPwm);       // Release the mutex after modifying the variable
+        xSemaphoreGive(xMutex_imuYaw);       // Release the mutex after modifying the variable
     }
 
     // // update raw roll and pitch as read from accelerometer
@@ -150,7 +150,7 @@ inline double IMU_Class::get_gyro_yaw() {
     double yaw;
     if (xSemaphoreTake(xMutex_imuYaw, portMAX_DELAY)) {
         yaw = this->current_yaw;
-        xSemaphoreGive(xMutex_motorWheelsPwm);  // Release the mutex after modifying the variable
+        xSemaphoreGive(xMutex_imuYaw);  // Release the mutex after modifying the variable
         return yaw;
     }
 }

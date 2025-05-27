@@ -42,13 +42,14 @@ PID:
 
 ## Changelog
 (10/4/2025)
-1. Got rid of useless PS4 functions
+1. Got rid of most useless PS4 functions
 2. Changed I2C sending protocol. It's now optimized to send only 1 byte.
 
 # Todo
 1. Create I2C message from button presses.
 2. Create 1 task to transmit I2C message to ESP32 slaves at regular intervals.
 3. Clear button state in I2C class if PS4 gets disconnected.
+4. Fix Closed loop PID rotation.
 
 ## To Test:
     (~)
@@ -59,14 +60,3 @@ PID:
 
     (10/4/2025)
     - Button press. Should be notified through WiFi if PRINT_BUTTON_I2C_PRESS=1 in RuntimePrints.h
-
-Note
-
-// I2C struct to send to RTOS queue
-I2cDataPacket packet;
-// Set ESP32 address of packet for the I2C message to send to
-packet.slaveAddress = I2cButtonSendingAddress[i];
-// Create formatted message
-packet.message = 0x00
-// Send the packet to the queue
-BaseType_t result = xQueueSend(xQueue_i2c, &packet, 0);

@@ -6,6 +6,7 @@
 #include <Bluepad32.h>
 #include <ArduinoWebsockets.h>
 #include "IMU.h"
+#include "PS4.h"
 
 /*========================================================================================
 =                            WHEEL MOTOR GLOBAL VARIABLES                                =
@@ -84,6 +85,7 @@ bool sendWheelEncoderToWifi = 0;
 // I2C Class
 Ps4ToI2cBridge I2C_ESP2(ESP2_I2C_SLAVE_ADDRESS);
 Ps4ToI2cBridge I2C_ESP3(ESP3_I2C_SLAVE_ADDRESS);
+Ps4ToI2cBridge I2C_ESP4(ESP4_I2C_SLAVE_ADDRESS);
 
 // PS4 Stick outputs
 int ps4StickOutputs [4] = {0, 0, 0, 0};
@@ -92,7 +94,7 @@ ControllerPtr myControllers[BP32_MAX_GAMEPADS];
 /*========================================================================================
 =                                IMU GLOBAL VARIABLE                                     =
 ========================================================================================*/
-IMU_Class IMU();
+IMU_Class IMU;
 
 /*========================================================================================
 =                      WiFi DATA TRANSMISSION GLOBAL VARIABLES                           =

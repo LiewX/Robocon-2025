@@ -9,22 +9,22 @@ enum Ps4ButtonId : uint8_t {
 };
 
 class Ps4ToI2cBridge {
-    private:
-        uint8_t slaveAddress;
-        uint8_t previousState;
-        uint8_t currentState;
+private:
+    uint8_t slaveAddress;
+    uint8_t previousState;
+        
+public:
+    // Constructor
+    Ps4ToI2cBridge(uint8_t address);
     
-    public:
-        // Constructor
-        Ps4ToI2cBridge(uint8_t address);
+    uint8_t currentState;
     
-        // Update the state of a button (true = pressed, false = released)
-        void update_button_state(uint8_t index, bool pressed);
-    
-        void send_to_i2c_transmission_queue();
-        void clear_button_states();
-    };
+    // Update the state of a button (true = pressed, false = released)
+    void update_button_state(uint8_t index, bool pressed);
+    void clear_button_states();
+};
 
+uint8_t get_button_state(Ps4ToI2cBridge& esp, SemaphoreHandle_t xMutex_I2cButtonStates);
 void onConnectedController(ControllerPtr ctl);
 void onDisconnectedController(ControllerPtr ctl);
 void dumpGamepad(ControllerPtr ctl);

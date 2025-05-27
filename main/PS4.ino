@@ -17,17 +17,17 @@ void Ps4ToI2cBridge::update_button_state(uint8_t index, bool pressed) {
         currentState &= ~(1 << index); // Clear bit
 }
 
-void Ps4ToI2cBridge::send_to_i2c_transmission_queue() {
-    if (currentState != previousState) {
-        Wire.beginTransmission(slaveAddress);
-        Wire.write(currentState);
-        Wire.endTransmission();
-        previousState = currentState;
-    }
-}
-
 void Ps4ToI2cBridge::clear_button_states() {
     currentState = 0;
+}
+
+uint8_t get_button_state(Ps4ToI2cBridge& esp, SemaphoreHandle_t xMutex_I2cButtonStates) {
+    uint8_t message;
+    if (xSemaphoreTake(xMutex_I2cButtonStates, 50)) {
+        message = esp.currentState;
+        return message;
+    }
+    xSemaphoreGive(xMutex_I2cButtonStates); // Release the mutex after accessing variable
 }
 
 // This callback gets called any time a new gamepad is connected.
@@ -96,13 +96,24 @@ void processGamepad(ControllerPtr ctl) {
     uint16_t rawButtons = ctl->buttons();
 
     // Update I2C message that is to be transmitted to ESP2 (Shooting) with desired button states
-    I2C_ESP2.update_button_state(0, (rawButtons & 0x0008) != 0); // Triangle button (bit 0)
-    I2C_ESP2.update_button_state(1, (rawButtons & 0x0010) != 0); // L1 button (bit 1)
-    I2C_ESP2.update_button_state(2, (rawButtons & 0x0020) != 0); // R1 button (bit 2)
-
+    if (xSemaphoreTake(xMutex_I2C_ESP2, 0)) {
+        I2C_ESP2.update_button_state(0, (rawButtons & 0x0008) != 0); // Triangle button (bit 0)
+        I2C_ESP2.update_button_state(1, (rawButtons & 0x0010) != 0); // L1 button (bit 1)
+        I2C_ESP2.update_button_state(2, (rawButtons & 0x0020) != 0); // R1 button (bit 2)
+    }
+    xSemaphoreGive(xMutex_I2C_ESP2);
+    
     // Update I2C message that is to be transmitted to ESP3 (Catching) with desired button states
+    if (xSemaphoreTake(xMutex_I2C_ESP3, 0)) {
+        
+    }
+    xSemaphoreGive(xMutex_I2C_ESP3);
 
     // Update I2C message that is to be transmitted to ESP4 (Dribbling) with desired button states
+    if (xSemaphoreTake(xMutex_I2C_ESP4, 0)) {
+        
+    }
+    xSemaphoreGive(xMutex_I2C_ESP4);
 
     if (ctl->a()) {
         static int colorIdx = 0;

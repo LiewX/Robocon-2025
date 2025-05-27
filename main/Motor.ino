@@ -124,10 +124,11 @@ void actuate_motor_wheels() {
 
     // Actuate each motors using shaped feedforward inputs and PID output (summed)
     for (int i = 0; i < 4; ++i) {
-        if (abs(controlOutput[i]) > wheelMotors[i].startingPwm)
-            wheelMotors[i].set_motor_PWM(controlOutput[i]);
-        else
-            wheelMotors[i].set_motor_PWM(0);
+        wheelMotors[i].set_motor_PWM(controlOutput[i]);
+        // if (abs(controlOutput[i]) > wheelMotors[i].startingPwm)
+        //     wheelMotors[i].set_motor_PWM(controlOutput[i]);
+        // else
+        //     wheelMotors[i].set_motor_PWM(0);
     }
 
     // Printing in WiFi WebSocket //

@@ -6,7 +6,7 @@ private:
     double kp;
     double ki;
     double kd;
-
+    
     // PID variables
     double error;
     double previousError;
@@ -17,6 +17,9 @@ private:
     // Output limits
     double outputMin;
     double outputMax;
+
+    // Debug flag to print PID variables
+    bool debug = false;
 
 public:
     // Constructor
@@ -38,5 +41,11 @@ public:
     inline void setCoefficients(double kp, double ki, double kd);
 
     // Checks if the process variable error is within the acceptable threshold from the target
-    inline bool PID_Controller::is_within_tolerance(double tolerance);
+    inline bool is_within_tolerance(double tolerance);
+
+    // Debug mode setter
+    inline void set_debug(bool enable);
+
+    // Print PID variables for tuning purposes
+    void print_debug_info(double currentValue, double proportional, double integralTerm, double derivativeTerm, double output);
 };

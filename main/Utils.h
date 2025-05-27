@@ -7,7 +7,7 @@ enum Direction : unsigned char {
 
 void stop_program();
 
-inline void check_task_creation(bool creationStatus, BaseType_t status, const char *taskName);
-inline void check_sem_creation(bool creationStatus, SemaphoreHandle_t sem, const char *semName);
-inline void check_queue_creation(bool creationStatus, QueueHandle_t queue, const char *queueName);
+bool create_and_check_sem(SemaphoreHandle_t &sem, const char* semName);
+bool create_and_check_queue(QueueHandle_t &queue, const char* queueName, size_t size, size_t itemSize);
+bool create_and_check_task(void (*taskFunc)(void*), const char* taskName, uint32_t stackSize, UBaseType_t priority, TaskHandle_t* taskHandle);
 inline void print_free_stack(TaskHandle_t taskHandle, const char* taskName);
